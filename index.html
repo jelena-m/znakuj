@@ -529,13 +529,15 @@ function handleNext(){
   const key = queue.shift();
   misses[key] = (misses[key]||0) + 1; saveMisses();
   const n = queue.length;
-  let pos = Math.min(randIn(6,16), n);
-  for (let t=0; t<6; t++){
-    const prev = queue[pos-1], next = queue[pos];
-    if (!((prev && isHard(prev)) || (next && isHard(next)))) break;
-    pos = Math.min(randIn(6,16), n);
+  const seen = (k) => k && (misses[k]||0) > 0;
+  let best = Math.min(randIn(6,18), n), bestAdj = 3;
+  for (let t=0; t<10; t++){
+    const cand = Math.min(randIn(6,18), n);
+    const adj = (seen(queue[cand-1]) ? 1 : 0) + (seen(queue[cand]) ? 1 : 0);
+    if (adj < bestAdj){ bestAdj = adj; best = cand; }
+    if (adj === 0) break;
   }
-  queue.splice(pos, 0, key);
+  queue.splice(best, 0, key);
   updateProgress();
   saveSession("study");
   slideNext(() => renderFront(cardByKey(queue[0])));
