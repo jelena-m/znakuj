@@ -268,7 +268,15 @@ async function copyText(text, btn){
 }
 
 const cards = [];
-themes.forEach(t => t.words.forEach(w => cards.push({ key: t.n+"::"+w, word: w, theme: t.n })));
+themes.forEach(t => {
+  const seen = new Set();
+  t.words.forEach(w => {
+    const base = w.replace(/,\s*[ab]\.?$/i, "").trim();
+    if (seen.has(base)) return;
+    seen.add(base);
+    cards.push({ key: t.n+"::"+base, word: base, theme: t.n });
+  });
+});
 
 const mem = {};
 const store = {
@@ -343,7 +351,7 @@ function buildChips(){
   themes.forEach(t => {
     const c = document.createElement("div");
     c.className = "chip" + (!hardOnly && selected.has(t.n) ? " active":"");
-    c.innerHTML = `${tag(t.n)} <span class="n">${t.words.length}</span>`;
+    c.innerHTML = `${tag(t.n)} <span class="n">${cards.filter(x=>x.theme===t.n).length}</span>`;
     c.onclick = () => {
       hardOnly = false;
       if (selected.has(t.n)) selected.delete(t.n); else selected.add(t.n);
