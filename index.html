@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Znakuj i ti A1 — trening</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#f4f7f8; --card:#ffffff; --ink:#15212b; --muted:#5c6a74; --line:#e3e9ec; --soft:#eef2f4;
+    --accent:#00b3d7; --accentd:#0098b8; --accent-soft:rgba(0,179,215,0.12);
+    --ok:#1fa97f; --okd:#178a68; --mid:#e0922e; --midd:#c2791d; --no:#e0556f; --nod:#c43f59;
+    --font:'Onest', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --shadow: 0 1px 2px rgba(20,40,60,0.05), 0 10px 30px rgba(20,40,60,0.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#10161b; --card:#1a232a; --ink:#e8eef1; --muted:#94a3ad; --line:#2a353d; --soft:#222d34;
+      --accent-soft: rgba(0,179,215,0.20);
+      --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 10px 30px rgba(0,0,0,0.45);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: var(--font); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.45; padding: 22px 16px 44px; }
+  .wrap { max-width: 600px; margin: 0 auto; }
+  h1 { font-size: clamp(1.5rem, 5vw, 1.85rem); font-weight: 700; letter-spacing: -0.02em; }
+  button { font-family: var(--font); cursor: pointer; }
+
+  /* START */
+  #start { margin-top: 8px; }
+  .gamecard { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 18px 18px; margin-top: 16px; }
+  .gc-head { font-size: 1.12rem; font-weight: 700; letter-spacing: -0.01em; }
+  .gc-sub { font-size: 0.88rem; color: var(--muted); margin-top: 3px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .chip { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 8px 14px; font-size: 0.88rem; font-weight: 600; }
+  .chip .n { color: var(--muted); font-weight: 500; font-size: 0.78rem; margin-left: 5px; }
+  .chip.active { background: var(--accent-soft); color: var(--accentd); border-color: rgba(0,179,215,0.45); }
+  .chip.active .n { color: var(--accentd); opacity: 0.7; }
+  .statrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+  .stat { font-size: 0.92rem; color: var(--muted); }
+  .stat b { color: var(--ink); }
+  .resetlink { background: none; border: none; color: var(--muted); font-size: 0.84rem; font-weight: 600; text-decoration: underline; padding: 4px 0; }
+  .primary { width: 100%; margin-top: 16px; background: var(--accent); color: #fff; border: none; border-radius: 14px; padding: 16px; font-size: 1.06rem; font-weight: 700; }
+  .primary:active { background: var(--accentd); }
+
+  .searchwrap { margin-top: 24px; }
+  .listlabel { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+  .search { width: 100%; margin-top: 10px; border: none; border-radius: 12px; padding: 13px 15px; font-size: 1rem; font-family: var(--font); background: var(--soft); color: var(--ink); outline: none; }
+  .search::placeholder { color: var(--muted); }
+  .search:focus { box-shadow: 0 0 0 2px rgba(0,179,215,0.30); }
+  .list { margin-top: 8px; }
+  .item { display: flex; align-items: center; gap: 11px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+  .item .tg { flex: 0 0 auto; text-align: center; background: var(--soft); color: var(--muted); border-radius: 6px; padding: 3px 7px; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+  .item .w { flex: 1; min-width: 0; font-size: 0.98rem; word-break: break-word; }
+  .item .w .v { color: var(--ok); font-size: 0.72rem; font-weight: 700; margin-left: 6px; }
+  .item .go { flex: 0 0 auto; text-decoration: none; color: var(--accent); font-size: 0.84rem; font-weight: 650; }
+
+  /* STUDY */
+  #study { display: none; max-width: 560px; margin: 0 auto; }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 14px; }
+  .back { display: inline-flex; align-items: center; justify-content: center; background: none; border: none; color: var(--ink); padding: 6px; margin-left: -6px; border-radius: 8px; }
+  .back:active { background: var(--soft); }
+  #progress { font-size: 1rem; font-weight: 700; color: var(--ink); }
+  .track { height: 7px; background: var(--line); border-radius: 99px; overflow: hidden; margin-bottom: 16px; }
+  .fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.35s; }
+
+  .flip { perspective: 1400px; }
+  .card3d { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 26px 22px; min-height: 264px; display: flex; flex-direction: column; transform-style: preserve-3d; transition: transform 0.24s ease; will-change: transform; }
+
+  .prompt { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; }
+  .prompt .word { font-size: clamp(1.6rem, 6vw, 2.1rem); font-weight: 700; line-height: 1.18; letter-spacing: -0.02em; word-break: break-word; }
+  .frontbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+  .frontbtns button { border: none; border-radius: 13px; padding: 15px; font-size: 1rem; font-weight: 700; color: #fff; }
+  .b-yes { background: var(--ok); } .b-yes:active { background: var(--okd); }
+  .b-no { background: var(--no); } .b-no:active { background: var(--nod); }
+
+  .eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+  .bword { font-size: clamp(1.35rem, 5vw, 1.7rem); font-weight: 700; letter-spacing: -0.02em; word-break: break-word; }
+  .bword-row { display: flex; align-items: center; gap: 8px; margin: 4px 0 16px; }
+  .copybtn { flex: 0 0 auto; background: var(--soft); border: none; color: var(--muted); border-radius: 8px; padding: 6px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+  .copybtn:active { background: var(--line); }
+  .copybtn.done { color: var(--ok); }
+  .see { display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; background: transparent; color: var(--accent); border: 1.5px solid var(--accent); border-radius: 12px; padding: 13px 18px; font-size: 0.98rem; font-weight: 650; }
+  .see:active { background: rgba(0,179,215,0.08); }
+  .vid video { width: 100%; aspect-ratio: 4 / 3; border-radius: 13px; background: #000; display: block; }
+  .next { width: 100%; margin-top: 14px; background: var(--accent); color: #fff; border: none; border-radius: 13px; padding: 15px; font-size: 1.02rem; font-weight: 700; }
+  .next:active { background: var(--accentd); }
+  .backtop { flex: 1; min-height: 0; }
+  .backactions { display: flex; flex-direction: column; gap: 10px; }
+  .backactions .next { margin-top: 0; }
+
+  /* DONE */
+  #done { display: none; text-align: center; margin-top: 56px; max-width: 560px; margin-left: auto; margin-right: auto; }
+  #done .big { font-size: 1.6rem; font-weight: 700; }
+  #done p { color: var(--muted); margin-top: 8px; }
+
+  /* MODAL */
+  .overlay { position: fixed; inset: 0; background: rgba(21,33,43,0.45); display: none; align-items: center; justify-content: center; padding: 22px; z-index: 50; }
+  .overlay.show { display: flex; }
+  .modal { background: var(--card); border-radius: 20px; padding: 24px; max-width: 360px; width: 100%; box-shadow: 0 24px 60px rgba(0,0,0,0.28); }
+  .modal .mt { font-size: 1.18rem; font-weight: 700; }
+  .modal .mx { color: var(--muted); font-size: 0.92rem; margin-top: 9px; line-height: 1.5; }
+  .modal .ma { display: flex; gap: 10px; margin-top: 22px; }
+  .modal .ma button { flex: 1; border: none; border-radius: 12px; padding: 13px; font-size: 0.96rem; font-weight: 700; font-family: var(--font); }
+  .btn-ghost { background: var(--soft); color: var(--ink); }
+  .btn-danger { background: var(--no); color: #fff; }
+  .btn-danger:active { background: var(--nod); }
+
+  .splash { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 34px; z-index: 100; transition: opacity 0.45s ease; }
+  .splash.hide { opacity: 0; pointer-events: none; }
+  body.loading .wrap { visibility: hidden; }
+  .splash .q { max-width: 640px; text-align: center; font-size: clamp(2.2rem, 8.5vw, 3.4rem); font-weight: 700; line-height: 1.22; letter-spacing: -0.02em; color: var(--ink); animation: qin 0.55s ease both; }
+  @keyframes qin { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) { .card3d { transition: none; } .splash .q { animation: none; } }
+</style>
+</head>
+<body class="loading">
+<div class="splash" id="splash"><div class="q" id="splashQ"></div></div>
+<div class="wrap">
+  <h1 id="homeTitle">Znakuj i ti A1</h1>
+
+  <!-- START -->
+  <section id="start">
+    <div class="gamecard">
+      <div class="chips" id="scopeChips"></div>
+      <div class="statrow">
+        <span class="stat" id="startStat"></span>
+        <button class="resetlink" id="reset">Resetiraj napredak</button>
+      </div>
+      <button class="primary" id="begin">Vježbaj</button>
+    </div>
+
+    <div class="searchwrap">
+      <div class="listlabel">Sve riječi</div>
+      <input class="search" id="search" type="text" placeholder="Traži riječ…" autocomplete="off">
+      <div class="list" id="list"></div>
+    </div>
+  </section>
+
+  <!-- STUDY -->
+  <section id="study">
+    <div class="bar">
+      <button class="back" id="stop" aria-label="Natrag">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <span id="progress"></span>
+    </div>
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <div class="flip"><div class="card3d" id="card"></div></div>
+  </section>
+
+  <!-- DONE -->
+  <section id="done">
+    <div class="big">Sve pogođeno! 🎉</div>
+    <p id="doneMsg"></p>
+    <button class="primary" id="again">Vježbaj ponovno</button>
+    <button class="resetlink" id="backStart" style="margin-top:12px">Natrag na izbor</button>
+  </section>
+</div>
+
+<!-- RESET MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="mt">Resetirati napredak?</div>
+    <div class="mx">Sve riječi označene kao naučene bit će obrisane. Ovo se ne može poništiti.</div>
+    <div class="ma">
+      <button class="btn-ghost" id="mCancel">Odustani</button>
+      <button class="btn-danger" id="mConfirm">Resetiraj</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const themes = [
+  { n:1, words:["adresa","at/@","Bok!","čuti","Dobar dan!","Dobra večer!","dobro","Dobro jutro!","Doviđenja!","Drago mi je što sam te upoznala!","e-adresa","gluh","gluhoslijep","godina","Hrvatska","hrvatski znakovni jezik","Hvala!","imati","ime","internet","ja","JA-ISTO","jezik","Kako se zoveš?","Kako si?","Koliko imaš godina?","ljut","mi","mobitel","moći","moliti","mrežna stranica","nagluh","NE-RAZUMJETI","nervozan","on/ona/ono","oni/one/ona","opći upitni znak","Oprosti!","oprostiti","polako","ponoviti","pospan","prezime","razumjeti","slijep","sretan","telefon","ti","točka","trebati","tužan","učiti, a.","umoran","veseo","vi","Vidimo se poslije!","znakovni jezik","znati"] },
+  { n:2, words:["da","dati","domaća zadaća","Dubrovnik","Dugo te nisam vidjela!","Gdje živiš?","grad","ići","isto","javiti","misliti","moj","morati","naš","ne","NE-POZNAVATI","NE-VOLJETI","njegov/njezin","njihov","objasniti","odrasti","Osijek","Otkud si?","ovdje","pitati","pomoći","poznavati","predstaviti","preseliti","prijatelj","puno","raditi","Rijeka","roditi se","sada","selo","Split","tamo","tvoj","upoznati","Varaždin","vaš","vidjeti","vježbati","voljeti","Zagreb","željeti","živjeti"] },
+  { n:3, words:["cijela noć","cijeli dan","crkva","često","četvrtak","čitati","danas","datum","družiti se","film","gledati","godišnje doba","hladno","i","ići van","idući","igrati se","izlet","jesen","jučer","kava","kino","kiša","knjiga","kolovoz","kuća","lijepo","lipanj","listopad","ljeto","mjesec","more","naći","navečer","nedjelja","nikad","oblačno","obožavati","odmarati se","onaj","ostati","ovaj","ovisi","ožujak","PADATI-KIŠA","PADATI-SNIJEG","petak","pisati","PLUS","početi","ponedjeljak","ponekad","popodne","posao","prekjučer","prekosutra","prije, a.","prije, b.","proljeće","prosinac","prošli","PUHATI-VJETAR","puta","putovati","rijetko","rujan","siječanj","SJATI-SUNCE","sjediti","skupa","slaviti","snijeg","srijeda","srpanj","studeni","subota","sunce","sutra","svaki","svaki dan","svibanj","svježe","šetati","škola","Što radiš subotom?","temperatura zraka","tjedan","toplo","travanj","tulumariti","TV","učiti, b.","ugodno","ujutro","unutra","utorak","uvijek","vani","veljača","vikend","vjetar","vježbati, b.","vrijeme","vruće","zabavljati se","zima"] },
+  { n:4, words:["baka","beba","blizanac","brak","brat","bratić","cura","dečko","dijete","djed","dogoditi","domaća životinja","Gdje?","hrčak","jako","jedino","Kada?","Kakav?","Kako?","Koji?","kokoš","Koliko?","konj","kornjača","koza","krava","lud","mačka","mali","mama","miš","mlađi","muškarac","najbolji","NAS-2, a.","NAS-2, b.","NAS-3","NAS-4","NAS-5","nećak","nizak","nov","NJIH-2","NJIH-3","NJIH-4","NJIH-5","obitelj","osoba","ovca","papiga","pas","patka","pilić","podne","pola sata","ponoć","potpuno gluh","razvesti se","riba","roditelji","rođak","S kim živiš?","sam","sin","skupa, b.","slagati se","star","stariji","stric","suprug","svađati se","svi, a.","svi, b.","sviđati se","svinja","Što?","tata","tetak","Tko?","ujak","VAS-2","velik","visok","zaljubiti se","zaručnik","Zašto?","zec","žena","životinja"] },
+  { n:5, words:["baciti","bokserice","brijati bradu","brijati noge","brijati pazuh","brisati prašinu","cipele","čarape","češljati","četkica za zube","čist","čistiti","čizme","dezodorans","dobiti","doći","dolčevita","donje rublje","doručak","haljina","hlače","htjeti","jakna","japanke","kapa","kaput","kositi travu","košulja","kravata","krema za lice","krema za sunčanje","krema za tijelo","krevet","kupati","lak za nokte","majica","mesti","naočale","NE-DATI","NE-HTJETI","NE-MOĆI","NE-ZNATI","nemati","obući","obuti","odijelo","odjeća","papuče","parfem","pasta za zube","pidžama","prašina","prati auto","prati odjeću","prati suđe","prati zube","prljav","probuditi (koga)","probuditi se","razbacati","roll-on","ručak","ručni sat","sandale","sapun","smeće","smrdjeti","spavaćica","spremiti, a.","spremiti, b.","stroj za pranje rublja","stvar","suknja","sunčane naočale","sušilo za kosu","šampon","šešir","šilterica","škare","šminkati se","tekući sapun","tuširati","umivati","usisavati","ustati","večera","vesta","zbog"] },
+  { n:6, words:["bezobrazan","bijel","boja","brada","brkovi","crn","crven","čudan","ćelav","debeo","dosadan","drag","drukčiji","glava","GLUH POSAO","glup","ili","izabrati","izgledati","koljeno","kosa","kovrčava kosa","lakat","leđa","lice","lijep","ljubičast","miran","mršav","narančast","nepristojan","noga","nos","oko","opisati","osjetljiv","otvoren","pametan","pjegice","plav","pletenica","pljunuti netko","ponašati se","povučen","pristojan","prištići","ravna kosa","razgovarati","različit","rep","ruke","ružan","ružičast","simpatičan","siv","sladak","smeđ","smiješan","smršavjeti","sramežljiv","stopalo","stražnjica","svijetlo","šiške","TAKO GLUH PRIRODA","tamno","trbuh","udebljati","uho","umišljen","usta","vrat","zanimljiv","zelen","zgodan","zločest","žut"] },
+  { n:7, words:["biologija","bod","bojati se","diplomirati","djelatnik","engleski jezik","fakultet","fizika","francuski jezik","glazbena umjetnost","glumac","grupa","hrvatski jezik","informatika","izvrstan","jednostavan","kemija","konobar","kuhar","lagan","liječnik","likovna umjetnost","logoped","majstor","matematika","medicinska sestra","mrziti","NEMATI-POJMA","novinar","njemački jezik","ocjena","odgojitelj","osnovna škola","pasti ispit","pedagog","pisac","pjevač","povijest","predavač","predmet","prevoditelj","priroda i društvo","proći ispit","profesor","psiholog","raspored","ravnatelj","razmišljati","razred","redovna škola","sjećati se","sjetiti se","sportaš","srednja škola","strani jezik","strog","student","studirati","škola za gluhe","tajnik","talijanski jezik","težak","tjelesna i zdravstvena kultura","učenik","učitelj","upisati","užasan","vjeronauk","vozač","vrtić","zaboraviti","zanimanje","završiti","zemljopis"] },
+  { n:8, words:["atletika","badminton","biciklizam","boks","dosad","ekipa","finale","gimnastika","golf","hokej","igrač","igrati, b.","izgubiti","jahanje","karate","klizanje","košarka","kuglanje","medalja","navijati","ništa","nogomet","NULA","odbojka","odbojka na pijesku","osvojiti","plivanje","pobijediti","polufinale","rolanje","rukomet","skijanje","sport","stolni tenis","šah","tenis","trčanje","trening","utakmica","vaterpolo","veslanje","zdravlje"] },
+  { n:9, words:["aerodrom","autobus","autobusni kolodvor","automehaničarska radionica","avion","balkon","banka","benzinska postaja","bicikl","blagovaonica","blizu","bolnica","brod","cesta","čamac","daleko","desno","dizalo","dnevni boravak","dom zdravlja","garaža","helikopter","hodnik","hotel","ispred","iza","iza ugla","kamion","kat","krenuti","kuhinja","kupaonica","lijevo","ljudi","motor","muzej","naručiti","neboder","pakirati","podrum","poletjeti","policija","pošta","pozvati","ravno","restoran","samo-RAVNO","semafor","sletjeti","soba","spavaća soba","stan","stanica","starački dom","stati","studentski dom","susjedstvo","taksi","tavan","terasa","teretana","tramvaj","tražiti, a.","trgovina","ulazna vrata","ured","vatrogasna postaja","vikendica","vlak","vrt","WC","zgrada","željeznički kolodvor"] },
+  { n:"Dodatno", words:["torta","kolač","čokolada"] }
+];
+
+const overrides = {
+  "JA-ISTO":"isto","NE-RAZUMJETI":"razumjeti","PADATI-KIŠA":"kiša","PADATI-SNIJEG":"snijeg",
+  "PUHATI-VJETAR":"vjetar","SJATI-SUNCE":"sunce","NE-POZNAVATI":"poznavati","NE-VOLJETI":"voljeti",
+  "NE-DATI":"dati","NE-HTJETI":"htjeti","NE-MOĆI":"moći","NE-ZNATI":"znati","NEMATI-POJMA":"pojam",
+  "GLUH POSAO":"posao","TAKO GLUH PRIRODA":"priroda","samo-RAVNO":"ravno","PLUS":"plus","NULA":"nula",
+  "NAS-2, a.":"mi","NAS-2, b.":"mi","NAS-2":"mi","NAS-3":"mi","NAS-4":"mi","NAS-5":"mi",
+  "NJIH-2":"oni","NJIH-3":"oni","NJIH-4":"oni","NJIH-5":"oni","VAS-2":"vi"
+};
+
+function tag(t){ return (typeof t === "number") ? "T"+t : t; }
+function eyebrowText(t){ return (typeof t === "number") ? "Tema "+t : t; }
+function queryFor(w){ if (overrides[w]) return overrides[w]; return w.replace(/,\s*[ab]\.?$/i,"").replace(/\([^)]*\)/g,"").replace(/[!?.]+$/g,"").trim(); }
+function urlFor(w){ return "https://www.spreadthesign.com/hr.hr/search/?q=" + encodeURIComponent(queryFor(w)); }
+function posterFor(u){ return u.replace("/video/mp4/","/video/jpg/").replace(/\.mp4$/i,".jpg"); }
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function norm(s){ return s.toLowerCase().replace(/đ/g,"d").normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
+
+const copySvg = '<svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>';
+const checkSvg = '<svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+async function copyText(text, btn){
+  try { await navigator.clipboard.writeText(text); }
+  catch(e){
+    const t = document.createElement("textarea"); t.value = text;
+    t.style.position = "fixed"; t.style.opacity = "0"; document.body.appendChild(t);
+    t.select(); try { document.execCommand("copy"); } catch(_){}
+    document.body.removeChild(t);
+  }
+  btn.classList.add("done"); btn.innerHTML = checkSvg;
+  setTimeout(() => { btn.classList.remove("done"); btn.innerHTML = copySvg; }, 1200);
+}
+
+const cards = [];
+themes.forEach(t => t.words.forEach(w => cards.push({ key: t.n+"::"+w, word: w, theme: t.n })));
+
+const mem = {};
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return k in mem ? mem[k] : null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e){ mem[k] = v; } }
+};
+let mastered = new Set();
+let videos = {};
+function load(){
+  try { const r = store.get("sts_mastered"); if (r) JSON.parse(r).forEach(k=>mastered.add(k)); } catch(e){}
+  try { const r = store.get("sts_videos"); if (r) videos = JSON.parse(r)||{}; } catch(e){}
+}
+function saveMastered(){ store.set("sts_mastered", JSON.stringify([...mastered])); }
+function saveSession(view){ store.set("sts_session", JSON.stringify({ v: view, q: queue, s: [...selected] })); }
+
+const homeTitle = document.getElementById("homeTitle");
+const startEl = document.getElementById("start");
+const studyEl = document.getElementById("study");
+const doneEl = document.getElementById("done");
+const scopeChips = document.getElementById("scopeChips");
+const startStat = document.getElementById("startStat");
+const searchEl = document.getElementById("search");
+const listEl = document.getElementById("list");
+const progressEl = document.getElementById("progress");
+const fillEl = document.getElementById("fill");
+const card = document.getElementById("card");
+const overlay = document.getElementById("overlay");
+
+const REDUCE = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let selected = new Set();   // empty = sve teme (utječe samo na vježbu)
+let queue = [];
+let flipping = false;
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function inScope(c){ return selected.size===0 || selected.has(c.theme); }
+function cardByKey(k){ return cards.find(c=>c.key===k); }
+function randIn(lo,hi){ return lo + Math.floor(Math.random()*(hi-lo+1)); }
+
+function buildChips(){
+  scopeChips.innerHTML = "";
+  const all = document.createElement("div");
+  all.className = "chip" + (selected.size===0 ? " active":"");
+  all.innerHTML = `Sve teme <span class="n">${cards.length}</span>`;
+  all.onclick = () => { selected.clear(); buildChips(); updateStartStat(); saveSession("start"); };
+  scopeChips.appendChild(all);
+  themes.forEach(t => {
+    const c = document.createElement("div");
+    c.className = "chip" + (selected.has(t.n) ? " active":"");
+    c.innerHTML = `${tag(t.n)} <span class="n">${t.words.length}</span>`;
+    c.onclick = () => {
+      if (selected.has(t.n)) selected.delete(t.n); else selected.add(t.n);
+      buildChips(); updateStartStat(); saveSession("start");
+    };
+    scopeChips.appendChild(c);
+  });
+}
+function updateStartStat(){
+  const pool = cards.filter(inScope);
+  const done = pool.filter(c=>mastered.has(c.key)).length;
+  startStat.innerHTML = `Naučeno: <b>${done}</b> / ${pool.length}`;
+}
+// search list always covers ALL themes (independent of selected)
+function renderList(){
+  const q = norm(searchEl.value.trim());
+  const rows = cards.filter(c => !q || norm(c.word).includes(q));
+  listEl.innerHTML = rows.map(c => `
+    <div class="item">
+      <span class="tg">${tag(c.theme)}</span>
+      <span class="w">${esc(c.word)}${videos[c.key] ? '<span class="v">▶</span>' : ''}</span>
+      <button class="copybtn" data-copy="${esc(c.word)}" aria-label="Kopiraj riječ" title="Kopiraj riječ">${copySvg}</button>
+      <a class="go" href="${urlFor(c.word)}" target="_blank" rel="noopener">Vidi znak ↗</a>
+    </div>`).join("");
+}
+
+function showHome(){ startEl.style.display="block"; studyEl.style.display="none"; doneEl.style.display="none"; homeTitle.style.display="block"; updateStartStat(); saveSession("start"); }
+
+function begin(){
+  const pool = cards.filter(c => inScope(c) && !mastered.has(c.key));
+  if (pool.length === 0){ showDone(true); return; }
+  queue = shuffle(pool.map(c=>c.key));
+  startEl.style.display="none"; doneEl.style.display="none"; studyEl.style.display="block";
+  homeTitle.style.display="none";
+  card.style.transform = "";
+  updateProgress();
+  renderFront(cardByKey(queue[0]));
+  saveSession("study");
+}
+
+function updateProgress(){
+  const done = cards.filter(c=>inScope(c)&&mastered.has(c.key)).length;
+  const total = cards.filter(inScope).length;
+  progressEl.textContent = `${done} / ${total}`;
+  fillEl.style.width = (total ? Math.round((done/total)*100) : 0) + "%";
+}
+
+function renderFront(c){
+  card.innerHTML = `
+    <div class="prompt"><div class="word">${esc(c.word)}</div></div>
+    <div class="frontbtns">
+      <button class="b-no" id="fNo">Ne znam</button>
+      <button class="b-yes" id="fYes">Znam</button>
+    </div>`;
+  document.getElementById("fYes").onclick = handleYes;
+  document.getElementById("fNo").onclick = handleNo;
+}
+function renderBack(c){
+  const saved = videos[c.key];
+  const videoBlock = saved
+    ? `<div class="vid"><video src="${saved}" poster="${posterFor(saved)}" autoplay loop muted playsinline controls></video></div>`
+    : "";
+  const seeBlock = saved
+    ? ""
+    : `<a class="see" href="${urlFor(c.word)}" target="_blank" rel="noopener">Vidi znak ↗</a>`;
+  card.innerHTML = `
+    <div class="backtop">
+      <div class="eyebrow">${eyebrowText(c.theme)}</div>
+      <div class="bword-row">
+        <span class="bword">${esc(c.word)}</span>
+        <button class="copybtn" id="copyBtn" aria-label="Kopiraj riječ" title="Kopiraj riječ">${copySvg}</button>
+      </div>
+      ${videoBlock}
+    </div>
+    <div class="backactions">
+      ${seeBlock}
+      <button class="next" id="nextBtn">Dalje</button>
+    </div>`;
+  document.getElementById("nextBtn").onclick = handleNext;
+  const cb = document.getElementById("copyBtn");
+  cb.onclick = () => copyText(c.word, cb);
+}
+
+function flipSwap(renderFn){
+  if (REDUCE){ renderFn(); return; }
+  if (flipping) return;
+  flipping = true;
+  card.style.transform = "rotateY(90deg)";
+  setTimeout(() => {
+    renderFn();
+    card.style.transition = "none";
+    card.style.transform = "rotateY(-90deg)";
+    void card.offsetWidth;
+    card.style.transition = "transform 0.24s ease";
+    requestAnimationFrame(() => { card.style.transform = "rotateY(0deg)"; });
+    setTimeout(() => { flipping = false; }, 260);
+  }, 230);
+}
+
+// slide animation when moving to the next card
+function slideNext(renderFn){
+  if (REDUCE){ renderFn(); return; }
+  if (flipping) return;
+  flipping = true;
+  card.style.transition = "transform 0.2s ease, opacity 0.2s ease";
+  card.style.transform = "translateX(-42px)";
+  card.style.opacity = "0";
+  setTimeout(() => {
+    renderFn();
+    card.style.transition = "none";
+    card.style.transform = "translateX(42px)";
+    void card.offsetWidth;
+    card.style.transition = "transform 0.24s ease, opacity 0.24s ease";
+    requestAnimationFrame(() => { card.style.transform = "translateX(0)"; card.style.opacity = "1"; });
+    setTimeout(() => { flipping = false; }, 260);
+  }, 200);
+}
+
+// Znam: ne okreće, samo dolazi sljedeća kartica
+function handleYes(){
+  const key = queue.shift();
+  mastered.add(key); saveMastered();
+  if (queue.length === 0){ showDone(false); return; }
+  updateProgress();
+  saveSession("study");
+  slideNext(() => renderFront(cardByKey(queue[0])));
+}
+// Ne znam: okreni karticu i pokaži znak
+function handleNo(){ flipSwap(() => renderBack(cardByKey(queue[0]))); }
+// Dalje (s okrenute kartice): vrati riječ kasnije i idi na sljedeću
+function handleNext(){
+  const key = queue.shift();
+  queue.splice(Math.min(randIn(4,11), queue.length), 0, key);
+  updateProgress();
+  saveSession("study");
+  slideNext(() => renderFront(cardByKey(queue[0])));
+}
+
+function showDone(already){
+  studyEl.style.display="none"; startEl.style.display="none"; doneEl.style.display="block"; homeTitle.style.display="block";
+  const total = cards.filter(inScope).length;
+  document.getElementById("doneMsg").textContent = already
+    ? "Sve riječi u ovom izboru su već naučene."
+    : `Prošla si sve u ovom izboru (${total}). Bravo!`;
+  saveSession("done");
+}
+
+document.getElementById("begin").onclick = begin;
+document.getElementById("stop").onclick = showHome;
+document.getElementById("again").onclick = begin;
+document.getElementById("backStart").onclick = showHome;
+
+document.getElementById("reset").onclick = () => overlay.classList.add("show");
+document.getElementById("mCancel").onclick = () => overlay.classList.remove("show");
+overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.remove("show"); };
+document.getElementById("mConfirm").onclick = () => {
+  mastered.clear(); saveMastered(); updateStartStat(); overlay.classList.remove("show");
+};
+
+searchEl.addEventListener("input", renderList);
+listEl.addEventListener("click", (e) => {
+  const btn = e.target.closest(".copybtn");
+  if (btn && listEl.contains(btn)) copyText(btn.getAttribute("data-copy"), btn);
+});
+
+function restore(){
+  let s = null;
+  try { const r = store.get("sts_session"); if (r) s = JSON.parse(r); } catch(e){}
+  if (s && Array.isArray(s.s)) selected = new Set(s.s);
+  buildChips(); updateStartStat(); renderList();
+  if (s && s.v === "study") {
+    const pool = cards.filter(c => inScope(c) && !mastered.has(c.key));
+    if (pool.length) {
+      queue = shuffle(pool.map(c=>c.key));
+      startEl.style.display="none"; doneEl.style.display="none"; studyEl.style.display="block"; homeTitle.style.display="none";
+      card.style.transform = "";
+      updateProgress();
+      renderFront(cardByKey(queue[0]));
+      return;
+    }
+  }
+  if (s && s.v === "done") { showDone(false); }
+}
+
+const QUOTES = [
+  "Mali koraci svaki dan vode daleko.",
+  "Ono što vježbaš, to i postaješ.",
+  "Nije važno koliko sporo ideš, samo da ne staješ.",
+  "Svaka greška je dio učenja.",
+  "Danas malo bolje nego jučer.",
+  "Strpljenje je tiha snaga.",
+  "Znanje koje stekneš nitko ti ne može uzeti.",
+  "Dosljednost pobjeđuje žurbu.",
+  "Kreni odakle jesi, s onim što imaš.",
+  "Teško je dok ne postane lako.",
+  "Tvoj trud se zbraja, i kad ti se ne čini.",
+  "Vjeruj procesu, rezultati dolaze.",
+  "Hrabrost je krenuti i kad nisi sigurna.",
+  "Odmori ako trebaš, ali nemoj odustati.",
+  "Svaki znak koji naučiš približi te nekome."
+];
+(function(){
+  const sp = document.getElementById("splash");
+  const sq = document.getElementById("splashQ");
+  sq.textContent = QUOTES[Math.floor(Math.random()*QUOTES.length)];
+  setTimeout(() => {
+    document.body.classList.remove("loading");
+    sp.classList.add("hide");
+    setTimeout(() => { sp.style.display = "none"; }, 460);
+  }, 2000);
+})();
+
+load(); restore();
+</script>
+</body>
+</html>
