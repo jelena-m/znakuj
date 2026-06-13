@@ -363,6 +363,10 @@ function updateStartStat(){
 function renderList(){
   const q = norm(searchEl.value.trim());
   let rows = cards.filter(c => inScope(c) && (!hardOnly || isHard(c.key)) && (!q || norm(c.word).includes(q)));
+  let hmin = Infinity, hmax = 0;
+  if (hardOnly){
+    for (const c of cards){ if (isHard(c.key)){ const v = misses[c.key]||0; if (v<hmin) hmin=v; if (v>hmax) hmax=v; } }
+  }
   if (hardOnly){
     rows = rows.slice().sort((a,b) => (misses[b.key]||0)-(misses[a.key]||0) || collator.compare(a.word,b.word));
   } else {
@@ -376,7 +380,7 @@ function renderList(){
     const m = misses[c.key]||0;
     let dotClass = "", dotStyle = "", lbl;
     if (hardOnly){
-      let t = maxMissCache <= 0 ? 1 : m / maxMissCache;
+      let t = (hmax > hmin) ? (m - hmin) / (hmax - hmin) : 1;
       t = Math.max(0, Math.min(1, t));
       dotStyle = ` style="background:${heat(t)}"`;
       lbl = `Promašeno ${m}×`;
@@ -416,9 +420,15 @@ function begin(){
 }
 
 function updateProgress(){
-  const remaining = new Set(queue).size;
-  const total = sessionTotal || remaining || 1;
-  const done = Math.max(0, total - remaining);
+  let done, total;
+  if (hardOnly){
+    const remaining = new Set(queue).size;
+    total = sessionTotal || remaining || 1;
+    done = Math.max(0, total - remaining);
+  } else {
+    done = cards.filter(c=>inScope(c)&&mastered.has(c.key)).length;
+    total = cards.filter(inScope).length;
+  }
   progressEl.textContent = `${done} / ${total}`;
   fillEl.style.width = (total ? Math.round((done/total)*100) : 0) + "%";
 }
