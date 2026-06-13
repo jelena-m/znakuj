@@ -100,7 +100,7 @@
 
   .prompt { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; }
   .prompt .word { font-size: clamp(1.6rem, 6vw, 2.1rem); font-weight: 700; line-height: 1.18; letter-spacing: -0.02em; word-break: break-word; }
-  .frontbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .frontbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
   .frontbtns button { border: none; border-radius: 13px; padding: 15px; font-size: 1rem; font-weight: 700; color: #fff; }
   .b-yes { background: var(--ok); } .b-yes:active { background: var(--okd); }
   .b-no { background: var(--no); } .b-no:active { background: var(--nod); }
@@ -415,7 +415,7 @@ function begin(){
   homeTitle.style.display="none";
   card.style.transform = "";
   updateProgress();
-  renderCard(cardByKey(queue[0]));
+  renderFront(cardByKey(queue[0]));
   saveSession("study");
 }
 
@@ -433,7 +433,17 @@ function updateProgress(){
   fillEl.style.width = (total ? Math.round((done/total)*100) : 0) + "%";
 }
 
-function renderCard(c){
+function renderFront(c){
+  card.innerHTML = `
+    <div class="prompt"><div class="word">${esc(c.word)}</div></div>
+    <div class="frontbtns">
+      <button class="b-no" id="fNo">Ne znam</button>
+      <button class="b-yes" id="fYes">Znam</button>
+    </div>`;
+  document.getElementById("fYes").onclick = handleYes;
+  document.getElementById("fNo").onclick = handleNo;
+}
+function renderBack(c){
   const saved = videos[c.key];
   const videoBlock = saved
     ? `<div class="vid"><video src="${saved}" poster="${posterFor(saved)}" autoplay loop muted playsinline controls></video></div>`
@@ -450,15 +460,29 @@ function renderCard(c){
       </div>
       ${videoBlock}
     </div>
-    ${seeBlock}
-    <div class="frontbtns">
-      <button class="b-no" id="fNo">Ne znam</button>
-      <button class="b-yes" id="fYes">Znam</button>
+    <div class="backactions">
+      ${seeBlock}
+      <button class="next" id="nextBtn">Dalje</button>
     </div>`;
-  document.getElementById("fYes").onclick = handleYes;
-  document.getElementById("fNo").onclick = handleNo;
+  document.getElementById("nextBtn").onclick = handleNext;
   const cb = document.getElementById("copyBtn");
   cb.onclick = () => copyText(c.word, cb);
+}
+
+function flipSwap(renderFn){
+  if (REDUCE){ renderFn(); return; }
+  if (flipping) return;
+  flipping = true;
+  card.style.transform = "rotateY(90deg)";
+  setTimeout(() => {
+    renderFn();
+    card.style.transition = "none";
+    card.style.transform = "rotateY(-90deg)";
+    void card.offsetWidth;
+    card.style.transition = "transform 0.24s ease";
+    requestAnimationFrame(() => { card.style.transform = "rotateY(0deg)"; });
+    setTimeout(() => { flipping = false; }, 260);
+  }, 230);
 }
 
 // slide animation when moving to the next card
@@ -487,12 +511,13 @@ function handleYes(){
   if (queue.length === 0){ showDone(false); return; }
   updateProgress();
   saveSession("study");
-  slideNext(() => renderCard(cardByKey(queue[0])));
+  slideNext(() => renderFront(cardByKey(queue[0])));
 }
-// Ne znam: zabilježi promašaj, vrati riječ kasnije i idi na sljedeću
-function handleNo(){
+// Ne znam: okreni karticu i pokaži znak
+function handleNo(){ const k=queue[0]; misses[k]=(misses[k]||0)+1; saveMisses(); flipSwap(() => renderBack(cardByKey(k))); }
+// Dalje (s okrenute kartice): vrati riječ kasnije i idi na sljedeću
+function handleNext(){
   const key = queue.shift();
-  misses[key] = (misses[key]||0) + 1; saveMisses();
   const n = queue.length;
   let pos = Math.min(randIn(6,16), n);
   for (let t=0; t<6; t++){
@@ -503,7 +528,7 @@ function handleNo(){
   queue.splice(pos, 0, key);
   updateProgress();
   saveSession("study");
-  slideNext(() => renderCard(cardByKey(queue[0])));
+  slideNext(() => renderFront(cardByKey(queue[0])));
 }
 
 function showDone(already){
@@ -541,7 +566,7 @@ function restore(){
       startEl.style.display="none"; doneEl.style.display="none"; studyEl.style.display="block"; homeTitle.style.display="none";
       card.style.transform = "";
       updateProgress();
-      renderCard(cardByKey(queue[0]));
+      renderFront(cardByKey(queue[0]));
       return;
     }
   }
