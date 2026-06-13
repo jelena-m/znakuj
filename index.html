@@ -47,9 +47,11 @@
   .levelrow { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; width: 100%; padding: 12px 16px; background: var(--soft); border-radius: 999px; box-sizing: border-box; }
   .animal-emoji { font-size: 1.5rem; line-height: 1; }
   .animal-name { font-weight: 700; color: var(--ink); font-size: 0.98rem; }
-  .animal-next { margin-left: auto; color: var(--muted); font-weight: 600; font-size: 0.82rem; }
+  .animal-next { margin-left: auto; min-width: 0; color: var(--muted); font-weight: 600; font-size: 0.82rem; }
   .barright { display: flex; align-items: center; gap: 12px; }
-  .streak { display: none; align-items: center; font-weight: 700; color: var(--midd); font-size: 0.9rem; background: rgba(224,146,46,0.16); padding: 5px 11px; border-radius: 999px; }
+  .streak, .homestreak { align-items: center; font-weight: 700; color: var(--midd); font-size: 0.9rem; background: rgba(224,146,46,0.16); padding: 5px 11px; border-radius: 999px; white-space: nowrap; flex: 0 0 auto; }
+  .streak { display: none; }
+  .homestreak { display: inline-flex; }
   .done-badge { color: var(--ok); font-weight: 700; margin-left: 4px; }
   .toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 700; font-size: 0.95rem; opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; z-index: 250; max-width: 88%; text-align: center; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -105,7 +107,7 @@
   .back:active { background: var(--soft); }
   #progress { font-size: 1rem; font-weight: 700; color: var(--ink); }
   .track { height: 7px; background: var(--line); border-radius: 99px; overflow: hidden; margin-bottom: 16px; }
-  .fill { height: 100%; width: 0%; background: var(--ok); transition: width 0.35s; }
+  .fill { height: 100%; width: 0%; background: var(--ok); transition: width 0.35s, background 0.35s; }
 
   .flip { perspective: 1400px; }
   .card3d { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 26px 22px; min-height: 264px; display: flex; flex-direction: column; transform-style: preserve-3d; transition: transform 0.24s ease; will-change: transform; }
@@ -305,7 +307,9 @@ function load(){
   try { const r = store.get("sts_misses"); if (r) misses = JSON.parse(r)||{}; } catch(e){}
   recalcMax();
   try { const r = store.get("sts_videos"); if (r) videos = JSON.parse(r)||{}; } catch(e){}
+  try { const r = store.get("sts_beststreak"); if (r) bestStreak = parseInt(r)||0; } catch(e){}
 }
+function saveBestStreak(){ store.set("sts_beststreak", String(bestStreak)); }
 function saveMastered(){ store.set("sts_mastered", JSON.stringify([...mastered])); }
 function recalcMax(){ let m=0; for (const k in misses){ if (misses[k]>m) m=misses[k]; } maxMissCache=m; }
 function saveMisses(){ store.set("sts_misses", JSON.stringify(misses)); recalcMax(); }
@@ -347,6 +351,7 @@ let selected = new Set();   // empty = sve teme (utječe samo na vježbu)
 let queue = [];
 let flipping = false;
 let streak = 0;
+let bestStreak = 0;
 let milestonesFired = new Set();
 let toastTimer = null;
 
@@ -379,7 +384,7 @@ function buildChips(){
   if (hardN > 0){
     const h = document.createElement("div");
     h.className = "chip hardchip" + (hardOnly ? " active":"");
-    h.innerHTML = `Najteže 🔥 <span class="n">${hardN}</span>`;
+    h.innerHTML = `Najteže 🚨 <span class="n">${hardN}</span>`;
     h.onclick = () => {
       hardOnly = !hardOnly;
       if (hardOnly) selected.clear();
@@ -390,8 +395,9 @@ function buildChips(){
 }
 function updateStartStat(){
   const ai = currentAnimal(), a = ANIMALS[ai], na = ANIMALS[ai+1];
-  const nextTxt = na ? `Još ${na.t - mastered.size} točnih riječi do sljedeće razine` : "Najjača životinja!";
-  document.getElementById("levelStat").innerHTML = `<span class="animal-emoji">${a.e}</span><span class="animal-name">${a.n}</span><span class="animal-next">${nextTxt}</span>`;
+  const nextTxt = na ? `Još ${rijeciTxt(na.t - mastered.size)} do sljedeće razine` : "Najjača životinja!";
+  const fire = bestStreak >= 2 ? `<span class="homestreak">🔥 ${bestStreak}</span>` : "";
+  document.getElementById("levelStat").innerHTML = `<span class="animal-emoji">${a.e}</span><span class="animal-name">${a.n}</span>${fire}<span class="animal-next">${nextTxt}</span>`;
   document.getElementById("reset").style.visibility = hardOnly ? "hidden" : "visible";
   if (hardOnly){
     const n = cards.filter(c => isHard(c.key)).length;
@@ -471,6 +477,13 @@ const ANIMALS = [
   {t:430,e:"🐘",n:"Slon"},{t:560,e:"🐉",n:"Zmaj"}
 ];
 function currentAnimal(){ const m = mastered.size; let i = 0; for (let k=0;k<ANIMALS.length;k++){ if (m >= ANIMALS[k].t) i = k; } return i; }
+function rijeciTxt(n){
+  const a = n % 10, b = n % 100;
+  if (b >= 11 && b <= 14) return `${n} točnih riječi`;
+  if (a === 1) return `${n} točna riječ`;
+  if (a >= 2 && a <= 4) return `${n} točne riječi`;
+  return `${n} točnih riječi`;
+}
 function showToast(msg){
   const el = document.getElementById("toast");
   el.textContent = msg; el.classList.add("show");
@@ -501,10 +514,20 @@ function checkMilestone(){
     if (frac >= thr && !milestonesFired.has(thr)){ milestonesFired.add(thr); showToast(msg); break; }
   }
 }
+function progColor(frac){
+  const stops = [[0,[224,85,111]],[0.5,[224,146,46]],[1,[31,169,127]]];
+  let a = stops[0], b = stops[stops.length-1];
+  for (let i=0;i<stops.length-1;i++){ if (frac>=stops[i][0] && frac<=stops[i+1][0]){ a=stops[i]; b=stops[i+1]; break; } }
+  const span = b[0]-a[0], t = span ? (frac-a[0])/span : 0;
+  const c = a[1].map((v,i)=> Math.round(v + (b[1][i]-v)*t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
 function updateProgress(){
   const [done, total] = progressDoneTotal();
   progressEl.textContent = `${done} / ${total}`;
-  fillEl.style.width = (total ? Math.round((done/total)*100) : 0) + "%";
+  const frac = total ? done/total : 0;
+  fillEl.style.width = Math.round(frac*100) + "%";
+  fillEl.style.background = progColor(frac);
 }
 
 function renderFront(c){
@@ -585,6 +608,7 @@ function handleYes(){
   const oldAnimal = currentAnimal();
   mastered.add(key); saveMastered();
   streak++; updateStreak();
+  if (streak > bestStreak){ bestStreak = streak; saveBestStreak(); }
   const newAnimal = currentAnimal();
   if (queue.length === 0){ showDone(false, true); return; }
   updateProgress();
@@ -629,17 +653,18 @@ function confetti(){
   const resize = () => { c.width = innerWidth*dpr; c.height = innerHeight*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); };
   resize(); window.addEventListener("resize", resize);
   const colors = ["#00b3d7","#1fa97f","#e0922e","#e0556f","#f2c037","#7c5cff"];
-  const mk = (top) => ({ x: Math.random()*innerWidth, y: top ? (-20 - Math.random()*innerHeight*0.5) : Math.random()*innerHeight,
-    w: 6+Math.random()*6, h: 8+Math.random()*8, vy: 4.5+Math.random()*4.5, vx: -2+Math.random()*4,
+  const mk = (init) => ({ x: Math.random()*innerWidth,
+    y: init ? (Math.random()*innerHeight*2 - innerHeight) : (-20 - Math.random()*innerHeight),
+    w: 6+Math.random()*6, h: 8+Math.random()*8, vy: 3.2+Math.random()*2.8, vx: -1.5+Math.random()*3,
     rot: Math.random()*Math.PI, vr: -0.3+Math.random()*0.6, color: colors[Math.floor(Math.random()*colors.length)] });
   const parts = [];
-  for (let i=0;i<170;i++) parts.push(mk(true));
+  for (let i=0;i<260;i++) parts.push(mk(true));
   function frame(){
     if (confettiCanvas !== c){ window.removeEventListener("resize", resize); return; }
     ctx.clearRect(0,0,innerWidth,innerHeight);
     for (const p of parts){
-      p.x += p.vx; p.y += p.vy; p.vy += 0.06; p.rot += p.vr;
-      if (p.y > innerHeight + 30) Object.assign(p, mk(true));
+      p.x += p.vx; p.y += p.vy; p.vy += 0.03; if (p.vy > 6.5) p.vy = 6.5; p.rot += p.vr;
+      if (p.y > innerHeight + 30) Object.assign(p, mk(false));
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
       ctx.fillStyle = p.color; ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); ctx.restore();
     }
@@ -662,7 +687,7 @@ document.getElementById("reset").onclick = () => overlay.classList.add("show");
 document.getElementById("mCancel").onclick = () => overlay.classList.remove("show");
 overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.remove("show"); };
 document.getElementById("mConfirm").onclick = () => {
-  mastered.clear(); misses={}; saveMastered(); saveMisses(); buildChips(); updateStartStat(); renderList(); overlay.classList.remove("show");
+  mastered.clear(); misses={}; bestStreak=0; saveMastered(); saveMisses(); saveBestStreak(); buildChips(); updateStartStat(); renderList(); overlay.classList.remove("show");
 };
 
 searchEl.addEventListener("input", renderList);
@@ -689,7 +714,7 @@ function restore(){
       return;
     }
   }
-  if (s && s.v === "done") { showDone(false); }
+  if (s && s.v === "done") { showDone(false, true); }
 }
 
 const QUOTES = [
@@ -712,7 +737,10 @@ const QUOTES = [
 (function(){
   const sp = document.getElementById("splash");
   const sq = document.getElementById("splashQ");
-  sq.textContent = QUOTES[Math.floor(Math.random()*QUOTES.length)];
+  let firstVisit = false;
+  try { firstVisit = !store.get("sts_seen"); } catch(e){}
+  if (firstVisit){ sq.textContent = "Pozdrav!"; try { store.set("sts_seen", "1"); } catch(e){} }
+  else { sq.textContent = QUOTES[Math.floor(Math.random()*QUOTES.length)]; }
   setTimeout(() => {
     document.body.classList.remove("loading");
     sp.classList.add("hide");
