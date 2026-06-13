@@ -530,9 +530,10 @@ function handleNext(){
   misses[key] = (misses[key]||0) + 1; saveMisses();
   const n = queue.length;
   const seen = (k) => k && (misses[k]||0) > 0;
-  let best = Math.min(randIn(6,18), n), bestAdj = 3;
-  for (let t=0; t<10; t++){
-    const cand = Math.min(randIn(6,18), n);
+  const lo = Math.min(4, n);
+  let best = randIn(lo, n), bestAdj = 3;
+  for (let t=0; t<12; t++){
+    const cand = randIn(lo, n);
     const adj = (seen(queue[cand-1]) ? 1 : 0) + (seen(queue[cand]) ? 1 : 0);
     if (adj < bestAdj){ bestAdj = adj; best = cand; }
     if (adj === 0) break;
