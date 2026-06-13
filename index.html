@@ -77,7 +77,12 @@
   }
   .searchwrap { margin-top: 24px; }
   .listlabel { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
-  .search { width: 100%; margin-top: 10px; border: none; border-radius: 12px; padding: 13px 15px; font-size: 1rem; font-family: var(--font); background: var(--soft); color: var(--ink); outline: none; }
+  .searchbox { position: relative; margin-top: 10px; }
+  .search { width: 100%; border: none; border-radius: 12px; padding: 13px 44px 13px 42px; font-size: 1rem; font-family: var(--font); background: var(--soft); color: var(--ink); outline: none; }
+  .search-ico { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: none; background: transparent; color: var(--muted); width: 28px; height: 28px; border-radius: 50%; display: none; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  .search-clear.show { display: flex; }
+  @media (hover:hover) { .search-clear:hover { background: var(--line); color: var(--ink); } }
   .search::placeholder { color: var(--muted); }
   .search:focus { box-shadow: 0 0 0 2px rgba(0,179,215,0.30); }
   .list { margin-top: 8px; }
@@ -95,6 +100,7 @@
   .item .dot.s-no { background: var(--no); }
   .item .dot.s-mid { background: var(--mid); }
   .item .tg { flex: 0 0 auto; text-align: center; background: var(--soft); color: var(--muted); border-radius: 6px; padding: 3px 7px; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+  .tgn { margin-left: 2px; }
   .backtop .tg { display: inline-block; background: var(--soft); color: var(--muted); border-radius: 6px; padding: 3px 8px; font-size: 0.7rem; font-weight: 700; margin-bottom: 8px; }
   .item .w { flex: 1; min-width: 0; font-size: 0.98rem; word-break: break-word; }
   .item .w .v { color: var(--ok); font-size: 0.72rem; font-weight: 700; margin-left: 6px; }
@@ -144,11 +150,15 @@
   #done .donewrap { text-align: center; margin: 64px auto 0; max-width: 560px; }
   #done .bigicon { font-size: 5.5rem; line-height: 1; margin-bottom: 16px; }
   #done .big { font-size: 1.6rem; font-weight: 700; }
-  #doneHome { width: auto; display: inline-block; padding: 14px 26px; }
+  #done .doneactions { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin: 26px auto 0; width: 320px; max-width: 100%; }
+  #doneHome { width: 100%; display: block; padding: 15px 24px; margin-top: 0; font-size: 1.04rem; }
+  .donerepeat { width: 100%; display: block; padding: 15px 24px; background: var(--soft); color: var(--ink); border: none; border-radius: 14px; font-size: 1.04rem; font-weight: 700; font-family: var(--font); cursor: pointer; }
+  @media (hover:hover) { .donerepeat:hover { background: var(--line); } }
 
   /* MODAL */
   .overlay { position: fixed; inset: 0; background: rgba(21,33,43,0.45); display: none; align-items: center; justify-content: center; padding: 22px; z-index: 50; }
   .overlay.show { display: flex; }
+  #repeatOverlay { z-index: 300; }
   .modal { background: var(--card); border-radius: 20px; padding: 24px; max-width: 360px; width: 100%; box-shadow: 0 24px 60px rgba(0,0,0,0.28); }
   .modal .mt { font-size: 1.18rem; font-weight: 700; }
   .modal .mx { color: var(--muted); font-size: 0.92rem; margin-top: 9px; line-height: 1.5; }
@@ -160,6 +170,7 @@
 
   .splash { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 34px; z-index: 100; transition: opacity 0.45s ease; }
   .splash.hide { opacity: 0; pointer-events: none; }
+  body.loading { overflow: hidden; }
   body.loading .wrap { visibility: hidden; }
   .splash .q { max-width: 640px; text-align: center; font-size: clamp(2.2rem, 8.5vw, 3.4rem); font-weight: 700; line-height: 1.22; letter-spacing: -0.02em; color: var(--ink); animation: qin 0.55s ease both; }
   @keyframes qin { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -185,7 +196,13 @@
     </div>
 
     <div class="searchwrap">
-      <input class="search" id="search" type="text" placeholder="Traži riječ" autocomplete="off">
+      <div class="searchbox">
+        <svg class="search-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input class="search" id="search" type="text" placeholder="Traži riječ" autocomplete="off">
+        <button class="search-clear" id="searchClear" type="button" aria-label="Obriši">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
       <div class="list" id="list"></div>
     </div>
   </section>
@@ -212,7 +229,10 @@
     <div class="donewrap">
       <div class="bigicon">🎉</div>
       <div class="big">Sve znaš!</div>
-      <button class="primary" id="doneHome">Povratak na početnu stranicu</button>
+      <div class="doneactions">
+        <button class="primary" id="doneHome">Povratak na početnu stranicu</button>
+        <button class="donerepeat" id="doneRepeat" type="button">Ponovi temu</button>
+      </div>
     </div>
   </section>
 </div>
@@ -225,6 +245,17 @@
     <div class="ma">
       <button class="btn-ghost" id="mCancel">Odustani</button>
       <button class="btn-danger" id="mConfirm">Resetiraj</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="repeatOverlay">
+  <div class="modal">
+    <div class="mt">Ponoviti temu?</div>
+    <div class="mx">Napredak za ovu temu bit će obrisan i kreće se ispočetka.</div>
+    <div class="ma">
+      <button class="btn-ghost" id="repeatCancel">Odustani</button>
+      <button class="btn-danger" id="repeatConfirm">Ponovi</button>
     </div>
   </div>
 </div>
@@ -252,7 +283,7 @@ const overrides = {
   "NJIH-2":"oni","NJIH-3":"oni","NJIH-4":"oni","NJIH-5":"oni","VAS-2":"vi"
 };
 
-function tag(t){ return (typeof t === "number") ? "T"+t : t; }
+function tag(t){ return (typeof t === "number") ? 'T<span class="tgn">'+t+'</span>' : t; }
 function eyebrowText(t){ return (typeof t === "number") ? "Tema "+t : t; }
 function queryFor(w){
   if (overrides[w]) return overrides[w];
@@ -331,7 +362,7 @@ function statusRank(c){
   return 2;
 }
 const collator = new Intl.Collator("hr", { sensitivity: "accent", numeric: true });
-function saveSession(view){ store.set("sts_session", JSON.stringify({ v: view, q: queue, s: [...selected], h: hardOnly })); }
+function saveSession(view){ store.set("sts_session", JSON.stringify({ v: view, q: queue, s: [...selected], h: hardOnly, dc: doneCelebrated })); }
 
 const homeTitle = document.getElementById("homeTitle");
 const startEl = document.getElementById("start");
@@ -352,6 +383,7 @@ let queue = [];
 let flipping = false;
 let streak = 0;
 let bestStreak = 0;
+let doneCelebrated = false;
 let milestonesFired = new Set();
 let toastTimer = null;
 
@@ -411,12 +443,16 @@ function updateStartStat(){
 // search list always covers ALL themes (independent of selected)
 function renderList(){
   const q = norm(searchEl.value.trim());
-  let rows = cards.filter(c => inScope(c) && (!hardOnly || isHard(c.key)) && (!q || norm(c.word).includes(q)));
+  const searching = q.length > 0;
+  const useHard = hardOnly && !searching;
+  let rows = searching
+    ? cards.filter(c => norm(c.word).includes(q))
+    : cards.filter(c => inScope(c) && (!hardOnly || isHard(c.key)));
   let hmin = Infinity, hmax = 0;
-  if (hardOnly){
+  if (useHard){
     for (const c of cards){ if (isHard(c.key)){ const v = misses[c.key]||0; if (v<hmin) hmin=v; if (v>hmax) hmax=v; } }
   }
-  if (hardOnly){
+  if (useHard){
     rows = rows.slice().sort((a,b) => (misses[b.key]||0)-(misses[a.key]||0) || collator.compare(a.word,b.word));
   } else {
     rows = rows.slice().sort((a,b) => {
@@ -425,11 +461,11 @@ function renderList(){
       return collator.compare(a.word, b.word);
     });
   }
-  const showTag = selected.size !== 1;
+  const showTag = searching ? true : (selected.size !== 1);
   listEl.innerHTML = rows.map(c => {
     const m = misses[c.key]||0;
     let dotClass = "", dotStyle = "", lbl;
-    if (hardOnly){
+    if (useHard){
       let t = (hmax > hmin) ? (m - hmin) / (hmax - hmin) : 1;
       t = Math.max(0, Math.min(1, t));
       dotStyle = ` style="background:${heat(t)}"`;
@@ -455,6 +491,7 @@ function renderList(){
 function showHome(){ stopConfetti(); startEl.style.display="block"; studyEl.style.display="none"; doneEl.style.display="none"; homeTitle.style.display="block"; buildChips(); updateStartStat(); renderList(); saveSession("start"); }
 
 function begin(){
+  stopConfetti();
   const pool = hardOnly
     ? cards.filter(c => inScope(c) && isHard(c.key))
     : cards.filter(c => inScope(c) && !mastered.has(c.key));
@@ -675,6 +712,7 @@ function confetti(){
 function showDone(already, celebrate){
   studyEl.style.display="none"; startEl.style.display="none"; doneEl.style.display="block"; homeTitle.style.display="none";
   saveSession("done");
+  document.getElementById("doneRepeat").style.display = (selected.size === 1) ? "inline-block" : "none";
   if (celebrate && !REDUCE) confetti();
 }
 
@@ -682,6 +720,16 @@ document.getElementById("begin").onclick = () => begin();
 document.getElementById("stop").onclick = showHome;
 document.getElementById("doneBack").onclick = showHome;
 document.getElementById("doneHome").onclick = showHome;
+const repeatOverlay = document.getElementById("repeatOverlay");
+document.getElementById("doneRepeat").onclick = () => repeatOverlay.classList.add("show");
+document.getElementById("repeatCancel").onclick = () => repeatOverlay.classList.remove("show");
+repeatOverlay.onclick = (e) => { if (e.target === repeatOverlay) repeatOverlay.classList.remove("show"); };
+document.getElementById("repeatConfirm").onclick = () => {
+  repeatOverlay.classList.remove("show");
+  cards.forEach(c => { if (inScope(c)) mastered.delete(c.key); });
+  saveMastered(); buildChips(); updateStartStat();
+  begin();
+};
 
 document.getElementById("reset").onclick = () => overlay.classList.add("show");
 document.getElementById("mCancel").onclick = () => overlay.classList.remove("show");
@@ -690,7 +738,10 @@ document.getElementById("mConfirm").onclick = () => {
   mastered.clear(); misses={}; bestStreak=0; saveMastered(); saveMisses(); saveBestStreak(); buildChips(); updateStartStat(); renderList(); overlay.classList.remove("show");
 };
 
-searchEl.addEventListener("input", renderList);
+const searchClearEl = document.getElementById("searchClear");
+function syncSearchClear(){ searchClearEl.classList.toggle("show", searchEl.value.length > 0); }
+searchEl.addEventListener("input", () => { syncSearchClear(); renderList(); });
+searchClearEl.onclick = () => { searchEl.value = ""; syncSearchClear(); renderList(); searchEl.focus(); };
 listEl.addEventListener("click", (e) => {
   const btn = e.target.closest(".copybtn");
   if (btn && listEl.contains(btn)) copyText(btn.getAttribute("data-copy"), btn);
@@ -717,7 +768,7 @@ function restore(){
       return;
     }
   }
-  if (s && s.v === "done") { showDone(false, true); }
+  if (s && s.v === "done") { showDone(false, !!s.dc); }
 }
 
 const QUOTES = [
