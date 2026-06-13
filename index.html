@@ -44,6 +44,15 @@
   .resetlink { background: none; border: none; color: var(--muted); font-size: 0.84rem; font-weight: 600; text-decoration: underline; padding: 4px 0; }
   .primary { width: 100%; margin-top: 16px; background: var(--accent); color: #fff; border: none; border-radius: 14px; padding: 16px; font-size: 1.06rem; font-weight: 700; }
   .primary:active { background: var(--accentd); }
+  .levelrow { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; width: 100%; padding: 12px 16px; background: var(--soft); border-radius: 999px; box-sizing: border-box; }
+  .animal-emoji { font-size: 1.5rem; line-height: 1; }
+  .animal-name { font-weight: 700; color: var(--ink); font-size: 0.98rem; }
+  .animal-next { margin-left: auto; color: var(--muted); font-weight: 600; font-size: 0.82rem; }
+  .barright { display: flex; align-items: center; gap: 12px; }
+  .streak { display: none; align-items: center; font-weight: 700; color: var(--midd); font-size: 0.9rem; background: rgba(224,146,46,0.16); padding: 5px 11px; border-radius: 999px; }
+  .done-badge { color: var(--ok); font-weight: 700; margin-left: 4px; }
+  .toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 700; font-size: 0.95rem; opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; z-index: 250; max-width: 88%; text-align: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   button { cursor: pointer; }
   @media (hover: hover) {
@@ -158,12 +167,14 @@
 <body class="loading">
 <div class="splash" id="splash"><div class="q" id="splashQ"></div></div>
 <div class="wrap">
+  <div class="toast" id="toast"></div>
   <h1 id="homeTitle">Znakuj i ti A1</h1>
 
   <!-- START -->
   <section id="start">
     <div class="chips" id="scopeChips"></div>
     <div class="gamecard">
+      <div class="levelrow" id="levelStat"></div>
       <div class="statrow">
         <span class="stat" id="startStat"></span>
         <button class="resetlink" id="reset">Resetiraj napredak</button>
@@ -183,7 +194,7 @@
       <button class="back" id="stop" aria-label="Natrag">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
-      <span id="progress"></span>
+      <div class="barright"><span class="streak" id="streak"></span><span id="progress"></span></div>
     </div>
     <div class="track"><div class="fill" id="fill"></div></div>
     <div class="flip"><div class="card3d" id="card"></div></div>
@@ -335,6 +346,9 @@ const REDUCE = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 let selected = new Set();   // empty = sve teme (utječe samo na vježbu)
 let queue = [];
 let flipping = false;
+let streak = 0;
+let milestonesFired = new Set();
+let toastTimer = null;
 
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function inScope(c){ return selected.size===0 || selected.has(c.theme); }
@@ -351,7 +365,9 @@ function buildChips(){
   themes.forEach(t => {
     const c = document.createElement("div");
     c.className = "chip" + (!hardOnly && selected.has(t.n) ? " active":"");
-    c.innerHTML = `${tag(t.n)} <span class="n">${cards.filter(x=>x.theme===t.n).length}</span>`;
+    const themeCards = cards.filter(x=>x.theme===t.n);
+    const complete = themeCards.length>0 && themeCards.every(x=>mastered.has(x.key));
+    c.innerHTML = `${tag(t.n)} <span class="n">${themeCards.length}</span>${complete ? ' <span class="done-badge">✓</span>' : ''}`;
     c.onclick = () => {
       hardOnly = false;
       if (selected.has(t.n)) selected.delete(t.n); else selected.add(t.n);
@@ -373,6 +389,9 @@ function buildChips(){
   } else { hardOnly = false; }
 }
 function updateStartStat(){
+  const ai = currentAnimal(), a = ANIMALS[ai], na = ANIMALS[ai+1];
+  const nextTxt = na ? `Još ${na.t - mastered.size} točnih riječi do sljedeće razine` : "Najjača životinja!";
+  document.getElementById("levelStat").innerHTML = `<span class="animal-emoji">${a.e}</span><span class="animal-name">${a.n}</span><span class="animal-next">${nextTxt}</span>`;
   document.getElementById("reset").style.visibility = hardOnly ? "hidden" : "visible";
   if (hardOnly){
     const n = cards.filter(c => isHard(c.key)).length;
@@ -427,7 +446,7 @@ function renderList(){
   }).join("");
 }
 
-function showHome(){ startEl.style.display="block"; studyEl.style.display="none"; doneEl.style.display="none"; homeTitle.style.display="block"; buildChips(); updateStartStat(); renderList(); saveSession("start"); }
+function showHome(){ stopConfetti(); startEl.style.display="block"; studyEl.style.display="none"; doneEl.style.display="none"; homeTitle.style.display="block"; buildChips(); updateStartStat(); renderList(); saveSession("start"); }
 
 function begin(){
   const pool = hardOnly
@@ -435,6 +454,7 @@ function begin(){
     : cards.filter(c => inScope(c) && !mastered.has(c.key));
   if (pool.length === 0){ showDone(true); return; }
   sessionTotal = pool.length;
+  streak = 0; milestonesFired = new Set(); updateStreak();
   queue = shuffle(pool.map(c=>c.key));
   startEl.style.display="none"; doneEl.style.display="none"; studyEl.style.display="block";
   homeTitle.style.display="none";
@@ -444,16 +464,45 @@ function begin(){
   saveSession("study");
 }
 
-function updateProgress(){
-  let done, total;
+const ANIMALS = [
+  {t:0,e:"🐭",n:"Miš"},{t:8,e:"🐹",n:"Hrčak"},{t:20,e:"🐰",n:"Zec"},
+  {t:40,e:"🦊",n:"Lisica"},{t:70,e:"🐺",n:"Vuk"},{t:110,e:"🐗",n:"Vepar"},
+  {t:160,e:"🐅",n:"Tigar"},{t:230,e:"🦁",n:"Lav"},{t:320,e:"🐻",n:"Medvjed"},
+  {t:430,e:"🐘",n:"Slon"},{t:560,e:"🐉",n:"Zmaj"}
+];
+function currentAnimal(){ const m = mastered.size; let i = 0; for (let k=0;k<ANIMALS.length;k++){ if (m >= ANIMALS[k].t) i = k; } return i; }
+function showToast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+function updateStreak(){
+  const el = document.getElementById("streak");
+  if (streak >= 2){ el.textContent = `🔥 ${streak}`; el.style.display = "inline-flex"; }
+  else { el.textContent = ""; el.style.display = "none"; }
+}
+function progressDoneTotal(){
   if (hardOnly){
     const remaining = new Set(queue).size;
-    total = sessionTotal || remaining || 1;
-    done = Math.max(0, total - remaining);
-  } else {
-    done = cards.filter(c=>inScope(c)&&mastered.has(c.key)).length;
-    total = cards.filter(inScope).length;
+    const total = sessionTotal || remaining || 1;
+    return [Math.max(0, total - remaining), total];
   }
+  const done = cards.filter(c=>inScope(c)&&mastered.has(c.key)).length;
+  const total = cards.filter(inScope).length;
+  return [done, total];
+}
+function checkMilestone(){
+  const [done, total] = progressDoneTotal();
+  if (!total) return;
+  const frac = done/total;
+  const marks = [[0.75,"75%! Skoro pa gotovo 🎉"],[0.5,"Pola puta! Samo tako nastavi 🎉"],[0.25,"Već 25%! Ide super 🎉"]];
+  for (const [thr, msg] of marks){
+    if (frac >= thr && !milestonesFired.has(thr)){ milestonesFired.add(thr); showToast(msg); break; }
+  }
+}
+function updateProgress(){
+  const [done, total] = progressDoneTotal();
   progressEl.textContent = `${done} / ${total}`;
   fillEl.style.width = (total ? Math.round((done/total)*100) : 0) + "%";
 }
@@ -532,14 +581,20 @@ function slideNext(renderFn){
 // Znam: ne okreće, samo dolazi sljedeća kartica
 function handleYes(){
   const key = queue.shift();
+  const wasNew = !mastered.has(key);
+  const oldAnimal = currentAnimal();
   mastered.add(key); saveMastered();
+  streak++; updateStreak();
+  const newAnimal = currentAnimal();
   if (queue.length === 0){ showDone(false, true); return; }
   updateProgress();
+  if (wasNew && newAnimal > oldAnimal) showToast(`Sad si ${ANIMALS[newAnimal].n}! ${ANIMALS[newAnimal].e}`);
+  else checkMilestone();
   saveSession("study");
   slideNext(() => renderFront(cardByKey(queue[0])));
 }
 // Pokaži odgovor: okreni karticu (bez bilježenja promašaja)
-function handleReveal(){ flipSwap(() => renderBack(cardByKey(queue[0]))); }
+function handleReveal(){ streak = 0; updateStreak(); flipSwap(() => renderBack(cardByKey(queue[0]))); }
 // Dalje (nakon prikaza odgovora): zabilježi promašaj, vrati riječ kasnije i idi dalje
 function handleNext(){
   const key = queue.shift();
@@ -561,32 +616,34 @@ function handleNext(){
 }
 
 
+let confettiCanvas = null;
+function stopConfetti(){ if (confettiCanvas){ confettiCanvas.remove(); confettiCanvas = null; } }
 function confetti(){
+  stopConfetti();
   const c = document.createElement("canvas");
   c.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:200;";
   document.body.appendChild(c);
+  confettiCanvas = c;
   const ctx = c.getContext("2d");
   const dpr = window.devicePixelRatio || 1;
-  function resize(){ c.width = innerWidth*dpr; c.height = innerHeight*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
-  resize();
-  window.addEventListener("resize", resize);
+  const resize = () => { c.width = innerWidth*dpr; c.height = innerHeight*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); };
+  resize(); window.addEventListener("resize", resize);
   const colors = ["#00b3d7","#1fa97f","#e0922e","#e0556f","#f2c037","#7c5cff"];
+  const mk = (top) => ({ x: Math.random()*innerWidth, y: top ? (-20 - Math.random()*innerHeight*0.5) : Math.random()*innerHeight,
+    w: 6+Math.random()*6, h: 8+Math.random()*8, vy: 4.5+Math.random()*4.5, vx: -2+Math.random()*4,
+    rot: Math.random()*Math.PI, vr: -0.3+Math.random()*0.6, color: colors[Math.floor(Math.random()*colors.length)] });
   const parts = [];
-  for (let i=0;i<150;i++){
-    parts.push({ x: Math.random()*innerWidth, y: -20 - Math.random()*innerHeight*0.6,
-      w: 6+Math.random()*6, h: 8+Math.random()*8, vy: 2+Math.random()*3, vx: -1.5+Math.random()*3,
-      rot: Math.random()*Math.PI, vr: -0.2+Math.random()*0.4, color: colors[i%colors.length] });
-  }
-  const start = performance.now(), DURATION = 4500;
-  function frame(now){
+  for (let i=0;i<170;i++) parts.push(mk(true));
+  function frame(){
+    if (confettiCanvas !== c){ window.removeEventListener("resize", resize); return; }
     ctx.clearRect(0,0,innerWidth,innerHeight);
     for (const p of parts){
-      p.x += p.vx; p.y += p.vy; p.vy += 0.03; p.rot += p.vr;
+      p.x += p.vx; p.y += p.vy; p.vy += 0.06; p.rot += p.vr;
+      if (p.y > innerHeight + 30) Object.assign(p, mk(true));
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
       ctx.fillStyle = p.color; ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); ctx.restore();
     }
-    if (now - start < DURATION) requestAnimationFrame(frame);
-    else { window.removeEventListener("resize", resize); c.remove(); }
+    requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 }
@@ -605,7 +662,7 @@ document.getElementById("reset").onclick = () => overlay.classList.add("show");
 document.getElementById("mCancel").onclick = () => overlay.classList.remove("show");
 overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.remove("show"); };
 document.getElementById("mConfirm").onclick = () => {
-  mastered.clear(); misses={}; saveMastered(); saveMisses(); updateStartStat(); renderList(); overlay.classList.remove("show");
+  mastered.clear(); misses={}; saveMastered(); saveMisses(); buildChips(); updateStartStat(); renderList(); overlay.classList.remove("show");
 };
 
 searchEl.addEventListener("input", renderList);
@@ -623,6 +680,7 @@ function restore(){
     const pool = cards.filter(c => inScope(c) && !mastered.has(c.key));
     if (pool.length) {
       sessionTotal = pool.length;
+      streak = 0; milestonesFired = new Set(); updateStreak();
       queue = shuffle(pool.map(c=>c.key));
       startEl.style.display="none"; doneEl.style.display="none"; studyEl.style.display="block"; homeTitle.style.display="none";
       card.style.transform = "";
