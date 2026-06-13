@@ -57,7 +57,9 @@
     .back:hover { background: var(--soft); }
     .frontbtns .b-yes:hover { background: var(--okd); }
     .frontbtns .b-no:hover { background: var(--nod); }
-    .see:hover { background: rgba(0,179,215,0.08); }
+    .frontbtns .b-reveal:hover { background: var(--line); }
+    .frontbtns .b-go:hover { background: var(--accentd); }
+    .see:hover { background: var(--line); }
     .next:hover { background: var(--accentd); }
     .btn-ghost:hover { filter: brightness(0.97); }
     .btn-danger:hover { background: var(--nod); }
@@ -69,8 +71,8 @@
   .search:focus { box-shadow: 0 0 0 2px rgba(0,179,215,0.30); }
   .list { margin-top: 8px; }
   .item { display: flex; align-items: center; gap: 11px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
-  .secondary { width: 100%; margin-top: 10px; background: none; color: var(--accent); border: 1.5px solid var(--accent); border-radius: 14px; padding: 14px; font-size: 1rem; font-weight: 700; cursor: pointer; }
-  .secondary:active { background: var(--accent-soft); }
+  .secondary { width: 100%; margin-top: 10px; background: var(--soft); color: var(--ink); border: none; border-radius: 14px; padding: 14px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+  .secondary:active { background: var(--line); }
   .sortrow { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   .sortlbl { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
   .sortbtn { background: var(--soft); border: none; color: var(--muted); border-radius: 999px; padding: 6px 12px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
@@ -104,6 +106,11 @@
   .frontbtns button { border: none; border-radius: 13px; padding: 15px; font-size: 1rem; font-weight: 700; color: #fff; }
   .b-yes { background: var(--ok); } .b-yes:active { background: var(--okd); }
   .b-no { background: var(--no); } .b-no:active { background: var(--nod); }
+  .frontbtns .b-go { background: var(--accent); }
+  .frontbtns .b-go:active { background: var(--accentd); }
+  .frontbtns .b-reveal { background: var(--soft); color: var(--ink); }
+  .frontbtns .b-reveal:active { background: var(--line); }
+  .backactions .frontbtns { margin-top: 0; }
 
   .eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
   .bword { font-size: clamp(1.35rem, 5vw, 1.7rem); font-weight: 700; letter-spacing: -0.02em; word-break: break-word; }
@@ -111,8 +118,8 @@
   .copybtn { flex: 0 0 auto; background: var(--soft); border: none; color: var(--muted); border-radius: 8px; padding: 6px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
   .copybtn:active { background: var(--line); }
   .copybtn.done { color: var(--ok); }
-  .see { display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; background: transparent; color: var(--accent); border: 1.5px solid var(--accent); border-radius: 12px; padding: 13px 18px; font-size: 0.98rem; font-weight: 650; }
-  .see:active { background: rgba(0,179,215,0.08); }
+  .see { display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; background: var(--soft); color: var(--ink); border: none; border-radius: 12px; padding: 13px 18px; font-size: 0.98rem; font-weight: 650; }
+  .see:active { background: var(--line); }
   .vid video { width: 100%; aspect-ratio: 4 / 3; border-radius: 13px; background: #000; display: block; }
   .next { width: 100%; margin-top: 14px; background: var(--accent); color: #fff; border: none; border-radius: 13px; padding: 15px; font-size: 1.02rem; font-weight: 700; }
   .next:active { background: var(--accentd); }
@@ -437,11 +444,11 @@ function renderFront(c){
   card.innerHTML = `
     <div class="prompt"><div class="word">${esc(c.word)}</div></div>
     <div class="frontbtns">
-      <button class="b-no" id="fNo">Ne znam</button>
-      <button class="b-yes" id="fYes">Znam</button>
+      <button class="b-reveal" id="fReveal">Pokaži odgovor</button>
+      <button class="b-go" id="fYes">Dalje</button>
     </div>`;
   document.getElementById("fYes").onclick = handleYes;
-  document.getElementById("fNo").onclick = handleNo;
+  document.getElementById("fReveal").onclick = handleReveal;
 }
 function renderBack(c){
   const saved = videos[c.key];
@@ -513,11 +520,12 @@ function handleYes(){
   saveSession("study");
   slideNext(() => renderFront(cardByKey(queue[0])));
 }
-// Ne znam: okreni karticu i pokaži znak
-function handleNo(){ const k=queue[0]; misses[k]=(misses[k]||0)+1; saveMisses(); flipSwap(() => renderBack(cardByKey(k))); }
-// Dalje (s okrenute kartice): vrati riječ kasnije i idi na sljedeću
+// Pokaži odgovor: okreni karticu (bez bilježenja promašaja)
+function handleReveal(){ flipSwap(() => renderBack(cardByKey(queue[0]))); }
+// Dalje (nakon prikaza odgovora): zabilježi promašaj, vrati riječ kasnije i idi dalje
 function handleNext(){
   const key = queue.shift();
+  misses[key] = (misses[key]||0) + 1; saveMisses();
   const n = queue.length;
   let pos = Math.min(randIn(6,16), n);
   for (let t=0; t<6; t++){
@@ -530,6 +538,7 @@ function handleNext(){
   saveSession("study");
   slideNext(() => renderFront(cardByKey(queue[0])));
 }
+
 
 function showDone(already){
   studyEl.style.display="none"; startEl.style.display="none"; doneEl.style.display="block"; homeTitle.style.display="none";
