@@ -546,13 +546,13 @@ function handleNext(){
   misses[key] = (misses[key]||0) + 1; saveMisses();
   const n = queue.length;
   const seen = (k) => k && (misses[k]||0) > 0;
-  const lo = Math.min(4, n);
-  let best = randIn(lo, n), bestAdj = 3;
-  for (let t=0; t<12; t++){
+  const lo = Math.min(Math.max(8, Math.floor(n*0.4)), n);
+  const near = (pos) => { let c=0; for (let d=-2; d<=2; d++){ if (seen(queue[pos+d])) c++; } return c; };
+  let best = randIn(lo, n), bestScore = near(best);
+  for (let t=0; t<16 && bestScore>0; t++){
     const cand = randIn(lo, n);
-    const adj = (seen(queue[cand-1]) ? 1 : 0) + (seen(queue[cand]) ? 1 : 0);
-    if (adj < bestAdj){ bestAdj = adj; best = cand; }
-    if (adj === 0) break;
+    const s = near(cand);
+    if (s < bestScore){ bestScore = s; best = cand; }
   }
   queue.splice(best, 0, key);
   updateProgress();
