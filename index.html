@@ -133,6 +133,7 @@
   #done .donewrap { text-align: center; margin: 64px auto 0; max-width: 560px; }
   #done .bigicon { font-size: 5.5rem; line-height: 1; margin-bottom: 16px; }
   #done .big { font-size: 1.6rem; font-weight: 700; }
+  #doneHome { width: auto; display: inline-block; padding: 14px 26px; }
 
   /* MODAL */
   .overlay { position: fixed; inset: 0; background: rgba(21,33,43,0.45); display: none; align-items: center; justify-content: center; padding: 22px; z-index: 50; }
@@ -524,7 +525,7 @@ function slideNext(renderFn){
 function handleYes(){
   const key = queue.shift();
   mastered.add(key); saveMastered();
-  if (queue.length === 0){ showDone(false); return; }
+  if (queue.length === 0){ showDone(false, true); return; }
   updateProgress();
   saveSession("study");
   slideNext(() => renderFront(cardByKey(queue[0])));
@@ -552,9 +553,39 @@ function handleNext(){
 }
 
 
-function showDone(already){
+function confetti(){
+  const c = document.createElement("canvas");
+  c.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:200;";
+  document.body.appendChild(c);
+  const ctx = c.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  function resize(){ c.width = innerWidth*dpr; c.height = innerHeight*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  resize();
+  window.addEventListener("resize", resize);
+  const colors = ["#00b3d7","#1fa97f","#e0922e","#e0556f","#f2c037","#7c5cff"];
+  const parts = [];
+  for (let i=0;i<150;i++){
+    parts.push({ x: Math.random()*innerWidth, y: -20 - Math.random()*innerHeight*0.6,
+      w: 6+Math.random()*6, h: 8+Math.random()*8, vy: 2+Math.random()*3, vx: -1.5+Math.random()*3,
+      rot: Math.random()*Math.PI, vr: -0.2+Math.random()*0.4, color: colors[i%colors.length] });
+  }
+  const start = performance.now(), DURATION = 4500;
+  function frame(now){
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    for (const p of parts){
+      p.x += p.vx; p.y += p.vy; p.vy += 0.03; p.rot += p.vr;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = p.color; ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); ctx.restore();
+    }
+    if (now - start < DURATION) requestAnimationFrame(frame);
+    else { window.removeEventListener("resize", resize); c.remove(); }
+  }
+  requestAnimationFrame(frame);
+}
+function showDone(already, celebrate){
   studyEl.style.display="none"; startEl.style.display="none"; doneEl.style.display="block"; homeTitle.style.display="none";
   saveSession("done");
+  if (celebrate && !REDUCE) confetti();
 }
 
 document.getElementById("begin").onclick = () => begin();
