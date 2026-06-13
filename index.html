@@ -239,7 +239,13 @@ const overrides = {
 
 function tag(t){ return (typeof t === "number") ? "T"+t : t; }
 function eyebrowText(t){ return (typeof t === "number") ? "Tema "+t : t; }
-function queryFor(w){ if (overrides[w]) return overrides[w]; return w.replace(/,\s*[ab]\.?$/i,"").replace(/\([^)]*\)/g,"").replace(/[!?.]+$/g,"").trim(); }
+function queryFor(w){
+  if (overrides[w]) return overrides[w];
+  let q = w.replace(/,\s*[ab]\.?$/i,"").replace(/\([^)]*\)/g,"").replace(/[!?.]+$/g,"").trim();
+  const keepJezik = ["jezik","znakovni jezik","hrvatski znakovni jezik","strani jezik"];
+  if (/\sjezik$/i.test(q) && !keepJezik.includes(q.toLowerCase())) q = q.replace(/\s+jezik$/i,"").trim();
+  return q;
+}
 function urlFor(w){ return "https://www.spreadthesign.com/hr.hr/search/?q=" + encodeURIComponent(queryFor(w)); }
 function posterFor(u){ return u.replace("/video/mp4/","/video/jpg/").replace(/\.mp4$/i,".jpg"); }
 function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
