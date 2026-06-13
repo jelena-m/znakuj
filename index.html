@@ -34,7 +34,7 @@
   .gc-head { font-size: 1.12rem; font-weight: 700; letter-spacing: -0.01em; }
   .gc-sub { font-size: 0.88rem; color: var(--muted); margin-top: 3px; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-  .chip { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 8px 14px; font-size: 0.88rem; font-weight: 600; }
+  .chip { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 8px 14px; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
   .chip .n { color: var(--muted); font-weight: 500; font-size: 0.78rem; margin-left: 5px; }
   .chip.active { background: var(--accent-soft); color: var(--accentd); border-color: rgba(0,179,215,0.45); }
   .chip.active .n { color: var(--accentd); opacity: 0.7; }
@@ -45,6 +45,23 @@
   .primary { width: 100%; margin-top: 16px; background: var(--accent); color: #fff; border: none; border-radius: 14px; padding: 16px; font-size: 1.06rem; font-weight: 700; }
   .primary:active { background: var(--accentd); }
 
+  button { cursor: pointer; }
+  @media (hover: hover) {
+    .chip:hover { border-color: var(--accent); }
+    .resetlink:hover { color: var(--ink); }
+    .primary:hover { background: var(--accentd); }
+    .secondary:hover { background: var(--accent-soft); }
+    .sortbtn:hover { color: var(--ink); }
+    .copybtn:hover { background: var(--line); color: var(--ink); }
+    .item .go:hover { text-decoration: underline; }
+    .back:hover { background: var(--soft); }
+    .frontbtns .b-yes:hover { background: var(--okd); }
+    .frontbtns .b-no:hover { background: var(--nod); }
+    .see:hover { background: rgba(0,179,215,0.08); }
+    .next:hover { background: var(--accentd); }
+    .btn-ghost:hover { filter: brightness(0.97); }
+    .btn-danger:hover { background: var(--nod); }
+  }
   .searchwrap { margin-top: 24px; }
   .listlabel { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
   .search { width: 100%; margin-top: 10px; border: none; border-radius: 12px; padding: 13px 15px; font-size: 1rem; font-family: var(--font); background: var(--soft); color: var(--ink); outline: none; }
@@ -52,9 +69,18 @@
   .search:focus { box-shadow: 0 0 0 2px rgba(0,179,215,0.30); }
   .list { margin-top: 8px; }
   .item { display: flex; align-items: center; gap: 11px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+  .secondary { width: 100%; margin-top: 10px; background: none; color: var(--accent); border: 1.5px solid var(--accent); border-radius: 14px; padding: 14px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+  .secondary:active { background: var(--accent-soft); }
+  .sortrow { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .sortlbl { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
+  .sortbtn { background: var(--soft); border: none; color: var(--muted); border-radius: 999px; padding: 6px 12px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+  .sortbtn.active { background: var(--accent-soft); color: var(--accent); }
+  .item .cnt { flex: 0 0 auto; font-size: 0.72rem; font-weight: 700; color: var(--muted); }
+  .item .cnt.hard { color: var(--no); }
   .item .dot { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
   .item .dot.s-done { background: var(--ok); }
   .item .dot.s-no { background: var(--no); }
+  .item .dot.s-mid { background: var(--mid); }
   .item .tg { flex: 0 0 auto; text-align: center; background: var(--soft); color: var(--muted); border-radius: 6px; padding: 3px 7px; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
   .item .w { flex: 1; min-width: 0; font-size: 0.98rem; word-break: break-word; }
   .item .w .v { color: var(--ok); font-size: 0.72rem; font-weight: 700; margin-left: 6px; }
@@ -137,7 +163,7 @@
     </div>
 
     <div class="searchwrap">
-      <input class="search" id="search" type="text" placeholder="Traži riječ…" autocomplete="off">
+      <input class="search" id="search" type="text" placeholder="Traži riječ" autocomplete="off">
       <div class="list" id="list"></div>
     </div>
   </section>
@@ -234,15 +260,38 @@ const store = {
   set(k,v){ try { localStorage.setItem(k,v); } catch(e){ mem[k] = v; } }
 };
 let mastered = new Set();
-let wrong = new Set();
+let misses = {};
+let maxMissCache = 0;
+let sessionTotal = 0;
 let videos = {};
+let hardOnly = false;
 function load(){
   try { const r = store.get("sts_mastered"); if (r) JSON.parse(r).forEach(k=>mastered.add(k)); } catch(e){}
-  try { const r = store.get("sts_wrong"); if (r) JSON.parse(r).forEach(k=>wrong.add(k)); } catch(e){}
+  try { const r = store.get("sts_misses"); if (r) misses = JSON.parse(r)||{}; } catch(e){}
+  recalcMax();
   try { const r = store.get("sts_videos"); if (r) videos = JSON.parse(r)||{}; } catch(e){}
 }
 function saveMastered(){ store.set("sts_mastered", JSON.stringify([...mastered])); }
-function saveWrong(){ store.set("sts_wrong", JSON.stringify([...wrong])); }
+function recalcMax(){ let m=0; for (const k in misses){ if (misses[k]>m) m=misses[k]; } maxMissCache=m; }
+function saveMisses(){ store.set("sts_misses", JSON.stringify(misses)); recalcMax(); }
+function hardThreshold(){ return Math.max(1, Math.ceil(maxMissCache/2)); }
+function isHard(k){ return maxMissCache >= 1 && (misses[k]||0) >= hardThreshold(); }
+function effectiveSort(){ return maxMissCache > 0 ? "hard" : "alpha"; }
+function heat(t){
+  const stops = [[242,192,55],[237,137,54],[224,67,67]];
+  const x = Math.max(0, Math.min(1, t)) * (stops.length - 1);
+  const i = Math.min(Math.floor(x), stops.length - 2);
+  const f = x - i;
+  const c = stops[i].map((v,k)=>Math.round(v + (stops[i+1][k]-v)*f));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+function statusRank(c){
+  const m = misses[c.key]||0;
+  if (m>0 && !mastered.has(c.key)) return 0;
+  if (mastered.has(c.key)) return 1;
+  return 2;
+}
+const collator = new Intl.Collator("hr", { sensitivity: "accent", numeric: true });
 function saveSession(view){ store.set("sts_session", JSON.stringify({ v: view, q: queue, s: [...selected] })); }
 
 const homeTitle = document.getElementById("homeTitle");
@@ -271,36 +320,75 @@ function randIn(lo,hi){ return lo + Math.floor(Math.random()*(hi-lo+1)); }
 function buildChips(){
   scopeChips.innerHTML = "";
   const all = document.createElement("div");
-  all.className = "chip" + (selected.size===0 ? " active":"");
+  all.className = "chip" + (selected.size===0 && !hardOnly ? " active":"");
   all.innerHTML = `Sve teme <span class="n">${cards.length}</span>`;
-  all.onclick = () => { selected.clear(); buildChips(); updateStartStat(); renderList(); saveSession("start"); };
+  all.onclick = () => { selected.clear(); hardOnly = false; buildChips(); updateStartStat(); renderList(); saveSession("start"); };
   scopeChips.appendChild(all);
   themes.forEach(t => {
     const c = document.createElement("div");
-    c.className = "chip" + (selected.has(t.n) ? " active":"");
+    c.className = "chip" + (!hardOnly && selected.has(t.n) ? " active":"");
     c.innerHTML = `${tag(t.n)} <span class="n">${t.words.length}</span>`;
     c.onclick = () => {
+      hardOnly = false;
       if (selected.has(t.n)) selected.delete(t.n); else selected.add(t.n);
       buildChips(); updateStartStat(); renderList(); saveSession("start");
     };
     scopeChips.appendChild(c);
   });
+  const hardN = cards.filter(c => isHard(c.key)).length;
+  if (hardN > 0){
+    const h = document.createElement("div");
+    h.className = "chip hardchip" + (hardOnly ? " active":"");
+    h.innerHTML = `Najteže 🔥 <span class="n">${hardN}</span>`;
+    h.onclick = () => {
+      hardOnly = !hardOnly;
+      if (hardOnly) selected.clear();
+      buildChips(); updateStartStat(); renderList(); saveSession("start");
+    };
+    scopeChips.appendChild(h);
+  } else { hardOnly = false; }
 }
 function updateStartStat(){
+  document.getElementById("reset").style.visibility = hardOnly ? "hidden" : "visible";
+  if (hardOnly){
+    const n = cards.filter(c => isHard(c.key)).length;
+    startStat.innerHTML = `<b>${n}</b> ${n===1 ? "riječ" : "riječi"}`;
+    return;
+  }
   const pool = cards.filter(inScope);
   const done = pool.filter(c=>mastered.has(c.key)).length;
-  startStat.innerHTML = `Naučeno: <b>${done}</b> / ${pool.length}`;
+  startStat.innerHTML = `Naučeno <b>${done}</b> / ${pool.length} riječi`;
 }
 // search list always covers ALL themes (independent of selected)
 function renderList(){
   const q = norm(searchEl.value.trim());
-  const rows = cards.filter(c => inScope(c) && (!q || norm(c.word).includes(q)));
+  let rows = cards.filter(c => inScope(c) && (!hardOnly || isHard(c.key)) && (!q || norm(c.word).includes(q)));
+  if (hardOnly){
+    rows = rows.slice().sort((a,b) => (misses[b.key]||0)-(misses[a.key]||0) || collator.compare(a.word,b.word));
+  } else {
+    rows = rows.slice().sort((a,b) => {
+      const ra = statusRank(a), rb = statusRank(b);
+      if (ra !== rb) return ra - rb;
+      if (ra === 0) return (misses[b.key]||0)-(misses[a.key]||0) || collator.compare(a.word,b.word);
+      return collator.compare(a.word,b.word);
+    });
+  }
   listEl.innerHTML = rows.map(c => {
-    const st = mastered.has(c.key) ? "s-done" : (wrong.has(c.key) ? "s-no" : "");
-    const lbl = mastered.has(c.key) ? "Znam" : (wrong.has(c.key) ? "Ne znam" : "Još nije");
+    const m = misses[c.key]||0;
+    let dotClass = "", dotStyle = "", lbl;
+    if (m > 0){
+      let t = maxMissCache <= 1 ? 1 : (m - 1) / (maxMissCache - 1);
+      t = Math.max(0, Math.min(1, t));
+      dotStyle = ` style="background:${heat(t)}"`;
+      lbl = `Promašeno ${m}×`;
+    } else if (mastered.has(c.key)){
+      dotClass = "s-done"; lbl = "Znam, bez promašaja";
+    } else {
+      lbl = "Još nije vježbano";
+    }
     return `
     <div class="item">
-      <span class="dot ${st}" title="${lbl}"></span>
+      <span class="dot ${dotClass}"${dotStyle} title="${lbl}"></span>
       <span class="tg">${tag(c.theme)}</span>
       <span class="w">${esc(c.word)}${videos[c.key] ? '<span class="v">▶</span>' : ''}</span>
       <button class="copybtn" data-copy="${esc(c.word)}" aria-label="Kopiraj riječ" title="Kopiraj riječ">${copySvg}</button>
@@ -312,8 +400,11 @@ function renderList(){
 function showHome(){ startEl.style.display="block"; studyEl.style.display="none"; doneEl.style.display="none"; homeTitle.style.display="block"; updateStartStat(); renderList(); saveSession("start"); }
 
 function begin(){
-  const pool = cards.filter(c => inScope(c) && !mastered.has(c.key));
+  const pool = hardOnly
+    ? cards.filter(c => inScope(c) && isHard(c.key))
+    : cards.filter(c => inScope(c) && !mastered.has(c.key));
   if (pool.length === 0){ showDone(true); return; }
+  sessionTotal = pool.length;
   queue = shuffle(pool.map(c=>c.key));
   startEl.style.display="none"; doneEl.style.display="none"; studyEl.style.display="block";
   homeTitle.style.display="none";
@@ -324,8 +415,9 @@ function begin(){
 }
 
 function updateProgress(){
-  const done = cards.filter(c=>inScope(c)&&mastered.has(c.key)).length;
-  const total = cards.filter(inScope).length;
+  const remaining = new Set(queue).size;
+  const total = sessionTotal || remaining || 1;
+  const done = Math.max(0, total - remaining);
   progressEl.textContent = `${done} / ${total}`;
   fillEl.style.width = (total ? Math.round((done/total)*100) : 0) + "%";
 }
@@ -404,14 +496,14 @@ function slideNext(renderFn){
 // Znam: ne okreće, samo dolazi sljedeća kartica
 function handleYes(){
   const key = queue.shift();
-  mastered.add(key); wrong.delete(key); saveMastered(); saveWrong();
+  mastered.add(key); saveMastered();
   if (queue.length === 0){ showDone(false); return; }
   updateProgress();
   saveSession("study");
   slideNext(() => renderFront(cardByKey(queue[0])));
 }
 // Ne znam: okreni karticu i pokaži znak
-function handleNo(){ wrong.add(queue[0]); saveWrong(); flipSwap(() => renderBack(cardByKey(queue[0]))); }
+function handleNo(){ const k=queue[0]; misses[k]=(misses[k]||0)+1; saveMisses(); flipSwap(() => renderBack(cardByKey(k))); }
 // Dalje (s okrenute kartice): vrati riječ kasnije i idi na sljedeću
 function handleNext(){
   const key = queue.shift();
@@ -419,7 +511,7 @@ function handleNext(){
   let pos = Math.min(randIn(6,16), n);
   for (let t=0; t<6; t++){
     const prev = queue[pos-1], next = queue[pos];
-    if (!((prev && wrong.has(prev)) || (next && wrong.has(next)))) break;
+    if (!((prev && isHard(prev)) || (next && isHard(next)))) break;
     pos = Math.min(randIn(6,16), n);
   }
   queue.splice(pos, 0, key);
@@ -433,7 +525,7 @@ function showDone(already){
   saveSession("done");
 }
 
-document.getElementById("begin").onclick = begin;
+document.getElementById("begin").onclick = () => begin();
 document.getElementById("stop").onclick = showHome;
 document.getElementById("doneBack").onclick = showHome;
 
@@ -441,7 +533,7 @@ document.getElementById("reset").onclick = () => overlay.classList.add("show");
 document.getElementById("mCancel").onclick = () => overlay.classList.remove("show");
 overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.remove("show"); };
 document.getElementById("mConfirm").onclick = () => {
-  mastered.clear(); wrong.clear(); saveMastered(); saveWrong(); updateStartStat(); renderList(); overlay.classList.remove("show");
+  mastered.clear(); misses={}; saveMastered(); saveMisses(); updateStartStat(); renderList(); overlay.classList.remove("show");
 };
 
 searchEl.addEventListener("input", renderList);
@@ -458,6 +550,7 @@ function restore(){
   if (s && s.v === "study") {
     const pool = cards.filter(c => inScope(c) && !mastered.has(c.key));
     if (pool.length) {
+      sessionTotal = pool.length;
       queue = shuffle(pool.map(c=>c.key));
       startEl.style.display="none"; doneEl.style.display="none"; studyEl.style.display="block"; homeTitle.style.display="none";
       card.style.transform = "";
