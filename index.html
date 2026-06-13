@@ -84,6 +84,7 @@
   .item .dot.s-no { background: var(--no); }
   .item .dot.s-mid { background: var(--mid); }
   .item .tg { flex: 0 0 auto; text-align: center; background: var(--soft); color: var(--muted); border-radius: 6px; padding: 3px 7px; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+  .backtop .tg { display: inline-block; background: var(--soft); color: var(--muted); border-radius: 6px; padding: 3px 8px; font-size: 0.7rem; font-weight: 700; margin-bottom: 8px; }
   .item .w { flex: 1; min-width: 0; font-size: 0.98rem; word-break: break-word; }
   .item .w .v { color: var(--ok); font-size: 0.72rem; font-weight: 700; margin-left: 6px; }
   .item .go { flex: 0 0 auto; text-decoration: none; color: var(--accent); font-size: 0.84rem; font-weight: 650; }
@@ -95,7 +96,7 @@
   .back:active { background: var(--soft); }
   #progress { font-size: 1rem; font-weight: 700; color: var(--ink); }
   .track { height: 7px; background: var(--line); border-radius: 99px; overflow: hidden; margin-bottom: 16px; }
-  .fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.35s; }
+  .fill { height: 100%; width: 0%; background: var(--ok); transition: width 0.35s; }
 
   .flip { perspective: 1400px; }
   .card3d { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 26px 22px; min-height: 264px; display: flex; flex-direction: column; transform-style: preserve-3d; transition: transform 0.24s ease; will-change: transform; }
@@ -383,6 +384,7 @@ function renderList(){
       return collator.compare(a.word, b.word);
     });
   }
+  const showTag = selected.size !== 1;
   listEl.innerHTML = rows.map(c => {
     const m = misses[c.key]||0;
     let dotClass = "", dotStyle = "", lbl;
@@ -401,7 +403,7 @@ function renderList(){
     return `
     <div class="item">
       <span class="dot ${dotClass}"${dotStyle} title="${lbl}"></span>
-      <span class="tg">${tag(c.theme)}</span>
+      ${showTag ? `<span class="tg">${tag(c.theme)}</span>` : ""}
       <span class="w">${esc(c.word)}${videos[c.key] ? '<span class="v">▶</span>' : ''}</span>
       <button class="copybtn" data-copy="${esc(c.word)}" aria-label="Kopiraj riječ" title="Kopiraj riječ">${copySvg}</button>
       <a class="go" href="${urlFor(c.word)}" target="_blank" rel="noopener">Vidi znak ↗</a>
@@ -460,7 +462,7 @@ function renderBack(c){
     : `<a class="see" href="${urlFor(c.word)}" target="_blank" rel="noopener">Vidi znak ↗</a>`;
   card.innerHTML = `
     <div class="backtop">
-      <div class="eyebrow">${eyebrowText(c.theme)}</div>
+      ${selected.size !== 1 ? `<span class="tg">${tag(c.theme)}</span>` : ""}
       <div class="bword-row">
         <span class="bword">${esc(c.word)}</span>
         <button class="copybtn" id="copyBtn" aria-label="Kopiraj riječ" title="Kopiraj riječ">${copySvg}</button>
