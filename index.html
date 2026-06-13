@@ -409,7 +409,14 @@ function handleNo(){ wrong.add(queue[0]); saveWrong(); flipSwap(() => renderBack
 // Dalje (s okrenute kartice): vrati riječ kasnije i idi na sljedeću
 function handleNext(){
   const key = queue.shift();
-  queue.splice(Math.min(randIn(4,11), queue.length), 0, key);
+  const n = queue.length;
+  let pos = Math.min(randIn(6,16), n);
+  for (let t=0; t<6; t++){
+    const prev = queue[pos-1], next = queue[pos];
+    if (!((prev && wrong.has(prev)) || (next && wrong.has(next)))) break;
+    pos = Math.min(randIn(6,16), n);
+  }
+  queue.splice(pos, 0, key);
   updateProgress();
   saveSession("study");
   slideNext(() => renderFront(cardByKey(queue[0])));
