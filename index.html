@@ -197,7 +197,8 @@
     </div>
     <div class="donewrap">
       <div class="bigicon">🎉</div>
-      <div class="big">Sve pogođeno!</div>
+      <div class="big">Sve znaš!</div>
+      <button class="primary" id="doneHome">Povratak na početnu stranicu</button>
     </div>
   </section>
 </div>
@@ -559,6 +560,7 @@ function showDone(already){
 document.getElementById("begin").onclick = () => begin();
 document.getElementById("stop").onclick = showHome;
 document.getElementById("doneBack").onclick = showHome;
+document.getElementById("doneHome").onclick = showHome;
 
 document.getElementById("reset").onclick = () => overlay.classList.add("show");
 document.getElementById("mCancel").onclick = () => overlay.classList.remove("show");
