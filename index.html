@@ -100,7 +100,7 @@
 
   .prompt { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; }
   .prompt .word { font-size: clamp(1.6rem, 6vw, 2.1rem); font-weight: 700; line-height: 1.18; letter-spacing: -0.02em; word-break: break-word; }
-  .frontbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+  .frontbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
   .frontbtns button { border: none; border-radius: 13px; padding: 15px; font-size: 1rem; font-weight: 700; color: #fff; }
   .b-yes { background: var(--ok); } .b-yes:active { background: var(--okd); }
   .b-no { background: var(--no); } .b-no:active { background: var(--nod); }
@@ -274,7 +274,7 @@ function load(){
 function saveMastered(){ store.set("sts_mastered", JSON.stringify([...mastered])); }
 function recalcMax(){ let m=0; for (const k in misses){ if (misses[k]>m) m=misses[k]; } maxMissCache=m; }
 function saveMisses(){ store.set("sts_misses", JSON.stringify(misses)); recalcMax(); }
-function hardThreshold(){ return Math.max(1, Math.ceil(maxMissCache/2)); }
+function hardThreshold(){ return Math.max(1, Math.ceil(maxMissCache/3)); }
 function isHard(k){ return maxMissCache >= 1 && (misses[k]||0) >= hardThreshold(); }
 function effectiveSort(){ return maxMissCache > 0 ? "hard" : "alpha"; }
 function heat(t){
@@ -415,7 +415,7 @@ function begin(){
   homeTitle.style.display="none";
   card.style.transform = "";
   updateProgress();
-  renderFront(cardByKey(queue[0]));
+  renderCard(cardByKey(queue[0]));
   saveSession("study");
 }
 
@@ -433,17 +433,7 @@ function updateProgress(){
   fillEl.style.width = (total ? Math.round((done/total)*100) : 0) + "%";
 }
 
-function renderFront(c){
-  card.innerHTML = `
-    <div class="prompt"><div class="word">${esc(c.word)}</div></div>
-    <div class="frontbtns">
-      <button class="b-no" id="fNo">Ne znam</button>
-      <button class="b-yes" id="fYes">Znam</button>
-    </div>`;
-  document.getElementById("fYes").onclick = handleYes;
-  document.getElementById("fNo").onclick = handleNo;
-}
-function renderBack(c){
+function renderCard(c){
   const saved = videos[c.key];
   const videoBlock = saved
     ? `<div class="vid"><video src="${saved}" poster="${posterFor(saved)}" autoplay loop muted playsinline controls></video></div>`
@@ -460,29 +450,15 @@ function renderBack(c){
       </div>
       ${videoBlock}
     </div>
-    <div class="backactions">
-      ${seeBlock}
-      <button class="next" id="nextBtn">Dalje</button>
+    ${seeBlock}
+    <div class="frontbtns">
+      <button class="b-no" id="fNo">Ne znam</button>
+      <button class="b-yes" id="fYes">Znam</button>
     </div>`;
-  document.getElementById("nextBtn").onclick = handleNext;
+  document.getElementById("fYes").onclick = handleYes;
+  document.getElementById("fNo").onclick = handleNo;
   const cb = document.getElementById("copyBtn");
   cb.onclick = () => copyText(c.word, cb);
-}
-
-function flipSwap(renderFn){
-  if (REDUCE){ renderFn(); return; }
-  if (flipping) return;
-  flipping = true;
-  card.style.transform = "rotateY(90deg)";
-  setTimeout(() => {
-    renderFn();
-    card.style.transition = "none";
-    card.style.transform = "rotateY(-90deg)";
-    void card.offsetWidth;
-    card.style.transition = "transform 0.24s ease";
-    requestAnimationFrame(() => { card.style.transform = "rotateY(0deg)"; });
-    setTimeout(() => { flipping = false; }, 260);
-  }, 230);
 }
 
 // slide animation when moving to the next card
@@ -511,13 +487,12 @@ function handleYes(){
   if (queue.length === 0){ showDone(false); return; }
   updateProgress();
   saveSession("study");
-  slideNext(() => renderFront(cardByKey(queue[0])));
+  slideNext(() => renderCard(cardByKey(queue[0])));
 }
-// Ne znam: okreni karticu i pokaži znak
-function handleNo(){ const k=queue[0]; misses[k]=(misses[k]||0)+1; saveMisses(); flipSwap(() => renderBack(cardByKey(k))); }
-// Dalje (s okrenute kartice): vrati riječ kasnije i idi na sljedeću
-function handleNext(){
+// Ne znam: zabilježi promašaj, vrati riječ kasnije i idi na sljedeću
+function handleNo(){
   const key = queue.shift();
+  misses[key] = (misses[key]||0) + 1; saveMisses();
   const n = queue.length;
   let pos = Math.min(randIn(6,16), n);
   for (let t=0; t<6; t++){
@@ -528,7 +503,7 @@ function handleNext(){
   queue.splice(pos, 0, key);
   updateProgress();
   saveSession("study");
-  slideNext(() => renderFront(cardByKey(queue[0])));
+  slideNext(() => renderCard(cardByKey(queue[0])));
 }
 
 function showDone(already){
@@ -566,7 +541,7 @@ function restore(){
       startEl.style.display="none"; doneEl.style.display="none"; studyEl.style.display="block"; homeTitle.style.display="none";
       card.style.transform = "";
       updateProgress();
-      renderFront(cardByKey(queue[0]));
+      renderCard(cardByKey(queue[0]));
       return;
     }
   }
