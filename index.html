@@ -516,10 +516,10 @@ const ANIMALS = [
 function currentAnimal(){ const m = mastered.size; let i = 0; for (let k=0;k<ANIMALS.length;k++){ if (m >= ANIMALS[k].t) i = k; } return i; }
 function rijeciTxt(n){
   const a = n % 10, b = n % 100;
-  if (b >= 11 && b <= 14) return `${n} točnih riječi`;
-  if (a === 1) return `${n} točna riječ`;
-  if (a >= 2 && a <= 4) return `${n} točne riječi`;
-  return `${n} točnih riječi`;
+  if (b >= 11 && b <= 14) return `${n} naučenih riječi`;
+  if (a === 1) return `${n} naučena riječ`;
+  if (a >= 2 && a <= 4) return `${n} naučene riječi`;
+  return `${n} naučenih riječi`;
 }
 function showToast(msg){
   const el = document.getElementById("toast");
