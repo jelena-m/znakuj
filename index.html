@@ -278,7 +278,7 @@ function hardThreshold(){ return Math.max(1, Math.ceil(maxMissCache/2)); }
 function isHard(k){ return maxMissCache >= 1 && (misses[k]||0) >= hardThreshold(); }
 function effectiveSort(){ return maxMissCache > 0 ? "hard" : "alpha"; }
 function heat(t){
-  const stops = [[242,192,55],[237,137,54],[224,67,67]];
+  const stops = [[245,201,53],[241,160,44],[232,116,46],[222,60,60]];
   const x = Math.max(0, Math.min(1, t)) * (stops.length - 1);
   const i = Math.min(Math.floor(x), stops.length - 2);
   const f = x - i;
@@ -376,7 +376,7 @@ function renderList(){
     const m = misses[c.key]||0;
     let dotClass = "", dotStyle = "", lbl;
     if (hardOnly){
-      let t = maxMissCache <= 1 ? 1 : (m - 1) / (maxMissCache - 1);
+      let t = maxMissCache <= 0 ? 1 : m / maxMissCache;
       t = Math.max(0, Math.min(1, t));
       dotStyle = ` style="background:${heat(t)}"`;
       lbl = `Promašeno ${m}×`;
