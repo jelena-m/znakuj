@@ -369,20 +369,21 @@ function renderList(){
     rows = rows.slice().sort((a,b) => {
       const ra = statusRank(a), rb = statusRank(b);
       if (ra !== rb) return ra - rb;
-      if (ra === 0) return (misses[b.key]||0)-(misses[a.key]||0) || collator.compare(a.word,b.word);
-      return collator.compare(a.word,b.word);
+      return collator.compare(a.word, b.word);
     });
   }
   listEl.innerHTML = rows.map(c => {
     const m = misses[c.key]||0;
     let dotClass = "", dotStyle = "", lbl;
-    if (m > 0){
+    if (hardOnly){
       let t = maxMissCache <= 1 ? 1 : (m - 1) / (maxMissCache - 1);
       t = Math.max(0, Math.min(1, t));
       dotStyle = ` style="background:${heat(t)}"`;
       lbl = `Promašeno ${m}×`;
     } else if (mastered.has(c.key)){
-      dotClass = "s-done"; lbl = "Znam, bez promašaja";
+      dotClass = "s-done"; lbl = "Znam";
+    } else if (m > 0){
+      dotClass = "s-no"; lbl = `Ne znam (promašeno ${m}×)`;
     } else {
       lbl = "Još nije vježbano";
     }
