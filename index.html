@@ -33,12 +33,12 @@
   .gamecard { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 18px 18px; margin-top: 16px; }
   .gc-head { font-size: 1.12rem; font-weight: 700; letter-spacing: -0.01em; }
   .gc-sub { font-size: 0.88rem; color: var(--muted); margin-top: 3px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
   .chip { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 8px 14px; font-size: 0.88rem; font-weight: 600; }
   .chip .n { color: var(--muted); font-weight: 500; font-size: 0.78rem; margin-left: 5px; }
   .chip.active { background: var(--accent-soft); color: var(--accentd); border-color: rgba(0,179,215,0.45); }
   .chip.active .n { color: var(--accentd); opacity: 0.7; }
-  .statrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+  .statrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .stat { font-size: 0.92rem; color: var(--muted); }
   .stat b { color: var(--ink); }
   .resetlink { background: none; border: none; color: var(--muted); font-size: 0.84rem; font-weight: 600; text-decoration: underline; padding: 4px 0; }
@@ -52,6 +52,9 @@
   .search:focus { box-shadow: 0 0 0 2px rgba(0,179,215,0.30); }
   .list { margin-top: 8px; }
   .item { display: flex; align-items: center; gap: 11px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+  .item .dot { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+  .item .dot.s-done { background: var(--ok); }
+  .item .dot.s-no { background: var(--no); }
   .item .tg { flex: 0 0 auto; text-align: center; background: var(--soft); color: var(--muted); border-radius: 6px; padding: 3px 7px; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
   .item .w { flex: 1; min-width: 0; font-size: 0.98rem; word-break: break-word; }
   .item .w .v { color: var(--ok); font-size: 0.72rem; font-weight: 700; margin-left: 6px; }
@@ -123,8 +126,8 @@
 
   <!-- START -->
   <section id="start">
+    <div class="chips" id="scopeChips"></div>
     <div class="gamecard">
-      <div class="chips" id="scopeChips"></div>
       <div class="statrow">
         <span class="stat" id="startStat"></span>
         <button class="resetlink" id="reset">Resetiraj napredak</button>
@@ -133,7 +136,6 @@
     </div>
 
     <div class="searchwrap">
-      <div class="listlabel">Sve riječi</div>
       <input class="search" id="search" type="text" placeholder="Traži riječ…" autocomplete="off">
       <div class="list" id="list"></div>
     </div>
@@ -226,12 +228,15 @@ const store = {
   set(k,v){ try { localStorage.setItem(k,v); } catch(e){ mem[k] = v; } }
 };
 let mastered = new Set();
+let wrong = new Set();
 let videos = {};
 function load(){
   try { const r = store.get("sts_mastered"); if (r) JSON.parse(r).forEach(k=>mastered.add(k)); } catch(e){}
+  try { const r = store.get("sts_wrong"); if (r) JSON.parse(r).forEach(k=>wrong.add(k)); } catch(e){}
   try { const r = store.get("sts_videos"); if (r) videos = JSON.parse(r)||{}; } catch(e){}
 }
 function saveMastered(){ store.set("sts_mastered", JSON.stringify([...mastered])); }
+function saveWrong(){ store.set("sts_wrong", JSON.stringify([...wrong])); }
 function saveSession(view){ store.set("sts_session", JSON.stringify({ v: view, q: queue, s: [...selected] })); }
 
 const homeTitle = document.getElementById("homeTitle");
@@ -262,7 +267,7 @@ function buildChips(){
   const all = document.createElement("div");
   all.className = "chip" + (selected.size===0 ? " active":"");
   all.innerHTML = `Sve teme <span class="n">${cards.length}</span>`;
-  all.onclick = () => { selected.clear(); buildChips(); updateStartStat(); saveSession("start"); };
+  all.onclick = () => { selected.clear(); buildChips(); updateStartStat(); renderList(); saveSession("start"); };
   scopeChips.appendChild(all);
   themes.forEach(t => {
     const c = document.createElement("div");
@@ -270,7 +275,7 @@ function buildChips(){
     c.innerHTML = `${tag(t.n)} <span class="n">${t.words.length}</span>`;
     c.onclick = () => {
       if (selected.has(t.n)) selected.delete(t.n); else selected.add(t.n);
-      buildChips(); updateStartStat(); saveSession("start");
+      buildChips(); updateStartStat(); renderList(); saveSession("start");
     };
     scopeChips.appendChild(c);
   });
@@ -283,17 +288,22 @@ function updateStartStat(){
 // search list always covers ALL themes (independent of selected)
 function renderList(){
   const q = norm(searchEl.value.trim());
-  const rows = cards.filter(c => !q || norm(c.word).includes(q));
-  listEl.innerHTML = rows.map(c => `
+  const rows = cards.filter(c => inScope(c) && (!q || norm(c.word).includes(q)));
+  listEl.innerHTML = rows.map(c => {
+    const st = mastered.has(c.key) ? "s-done" : (wrong.has(c.key) ? "s-no" : "");
+    const lbl = mastered.has(c.key) ? "Znam" : (wrong.has(c.key) ? "Ne znam" : "Još nije");
+    return `
     <div class="item">
+      <span class="dot ${st}" title="${lbl}"></span>
       <span class="tg">${tag(c.theme)}</span>
       <span class="w">${esc(c.word)}${videos[c.key] ? '<span class="v">▶</span>' : ''}</span>
       <button class="copybtn" data-copy="${esc(c.word)}" aria-label="Kopiraj riječ" title="Kopiraj riječ">${copySvg}</button>
       <a class="go" href="${urlFor(c.word)}" target="_blank" rel="noopener">Vidi znak ↗</a>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 
-function showHome(){ startEl.style.display="block"; studyEl.style.display="none"; doneEl.style.display="none"; homeTitle.style.display="block"; updateStartStat(); saveSession("start"); }
+function showHome(){ startEl.style.display="block"; studyEl.style.display="none"; doneEl.style.display="none"; homeTitle.style.display="block"; updateStartStat(); renderList(); saveSession("start"); }
 
 function begin(){
   const pool = cards.filter(c => inScope(c) && !mastered.has(c.key));
@@ -388,14 +398,14 @@ function slideNext(renderFn){
 // Znam: ne okreće, samo dolazi sljedeća kartica
 function handleYes(){
   const key = queue.shift();
-  mastered.add(key); saveMastered();
+  mastered.add(key); wrong.delete(key); saveMastered(); saveWrong();
   if (queue.length === 0){ showDone(false); return; }
   updateProgress();
   saveSession("study");
   slideNext(() => renderFront(cardByKey(queue[0])));
 }
 // Ne znam: okreni karticu i pokaži znak
-function handleNo(){ flipSwap(() => renderBack(cardByKey(queue[0]))); }
+function handleNo(){ wrong.add(queue[0]); saveWrong(); flipSwap(() => renderBack(cardByKey(queue[0]))); }
 // Dalje (s okrenute kartice): vrati riječ kasnije i idi na sljedeću
 function handleNext(){
   const key = queue.shift();
@@ -423,7 +433,7 @@ document.getElementById("reset").onclick = () => overlay.classList.add("show");
 document.getElementById("mCancel").onclick = () => overlay.classList.remove("show");
 overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.remove("show"); };
 document.getElementById("mConfirm").onclick = () => {
-  mastered.clear(); saveMastered(); updateStartStat(); overlay.classList.remove("show");
+  mastered.clear(); wrong.clear(); saveMastered(); saveWrong(); updateStartStat(); renderList(); overlay.classList.remove("show");
 };
 
 searchEl.addEventListener("input", renderList);
