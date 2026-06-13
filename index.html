@@ -331,7 +331,7 @@ function statusRank(c){
   return 2;
 }
 const collator = new Intl.Collator("hr", { sensitivity: "accent", numeric: true });
-function saveSession(view){ store.set("sts_session", JSON.stringify({ v: view, q: queue, s: [...selected] })); }
+function saveSession(view){ store.set("sts_session", JSON.stringify({ v: view, q: queue, s: [...selected], h: hardOnly })); }
 
 const homeTitle = document.getElementById("homeTitle");
 const startEl = document.getElementById("start");
@@ -700,9 +700,12 @@ function restore(){
   let s = null;
   try { const r = store.get("sts_session"); if (r) s = JSON.parse(r); } catch(e){}
   if (s && Array.isArray(s.s)) selected = new Set(s.s);
+  hardOnly = !!(s && s.h);
   buildChips(); updateStartStat(); renderList();
   if (s && s.v === "study") {
-    const pool = cards.filter(c => inScope(c) && !mastered.has(c.key));
+    const pool = hardOnly
+      ? cards.filter(c => inScope(c) && isHard(c.key))
+      : cards.filter(c => inScope(c) && !mastered.has(c.key));
     if (pool.length) {
       sessionTotal = pool.length;
       streak = 0; milestonesFired = new Set(); updateStreak();
