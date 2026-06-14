@@ -429,7 +429,9 @@ function updateStartStat(){
   const ai = currentAnimal(), a = ANIMALS[ai], na = ANIMALS[ai+1];
   const nextTxt = na ? `Još ${rijeciTxt(na.t - mastered.size)} do sljedeće razine` : "Najjača životinja!";
   const fire = bestStreak >= 2 ? `<span class="homestreak">🔥 ${bestStreak}</span>` : "";
-  document.getElementById("levelStat").innerHTML = `<span class="animal-emoji">${a.e}</span><span class="animal-name">${a.n}</span>${fire}<span class="animal-next">${balanceTwoLines(nextTxt)}</span>`;
+  const row = document.getElementById("levelStat");
+  row.innerHTML = `<span class="animal-emoji">${a.e}</span><span class="animal-name">${a.n}</span>${fire}<span class="animal-next">${nextTxt}</span>`;
+  fitAnimalNext(row, nextTxt);
   document.getElementById("reset").style.visibility = hardOnly ? "hidden" : "visible";
   if (hardOnly){
     const n = cards.filter(c => isHard(c.key)).length;
@@ -514,6 +516,22 @@ const ANIMALS = [
   {t:430,e:"🐘",n:"Slon"},{t:560,e:"🐉",n:"Zmaj"}
 ];
 function currentAnimal(){ const m = mastered.size; let i = 0; for (let k=0;k<ANIMALS.length;k++){ if (m >= ANIMALS[k].t) i = k; } return i; }
+function fitAnimalNext(row, text){
+  const nextEl = row.querySelector(".animal-next");
+  if (!nextEl || !row.clientWidth) return;
+  nextEl.style.whiteSpace = "nowrap";
+  const cs = getComputedStyle(row);
+  const gap = parseFloat(cs.gap) || 0;
+  const padL = parseFloat(cs.paddingLeft) || 0;
+  const padR = parseFloat(cs.paddingRight) || 0;
+  const kids = [...row.children];
+  let othersW = 0;
+  kids.forEach(k => { if (k !== nextEl) othersW += k.getBoundingClientRect().width; });
+  const avail = row.clientWidth - padL - padR - othersW - gap * (kids.length - 1);
+  const oneLineW = nextEl.scrollWidth;
+  nextEl.style.whiteSpace = "";
+  if (oneLineW > avail + 1) nextEl.innerHTML = balanceTwoLines(text);
+}
 function balanceTwoLines(text){
   const words = text.split(" ");
   if (words.length < 4) return text;
@@ -821,6 +839,14 @@ const QUOTES = [
   }, 2000);
 })();
 
+const _wrapEl = document.querySelector(".wrap");
+let _lastW = _wrapEl ? _wrapEl.clientWidth : 0;
+if (window.ResizeObserver && _wrapEl){
+  new ResizeObserver(() => {
+    const w = _wrapEl.clientWidth;
+    if (w !== _lastW){ _lastW = w; if (startEl.style.display !== "none") updateStartStat(); }
+  }).observe(_wrapEl);
+}
 load(); restore();
 </script>
 </body>
