@@ -44,16 +44,16 @@
   .resetlink { background: none; border: none; color: var(--muted); font-size: 0.84rem; font-weight: 600; text-decoration: underline; padding: 4px 0; }
   .primary { width: 100%; margin-top: 16px; background: var(--accent); color: #fff; border: none; border-radius: 14px; padding: 16px; font-size: 1.06rem; font-weight: 700; }
   .primary:active { background: var(--accentd); }
-  .levelrow { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; width: 100%; padding: 12px 16px; background: var(--soft); border-radius: 999px; box-sizing: border-box; }
+  .levelrow { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; width: 100%; padding: 12px 16px; background: var(--soft); border-radius: 14px; box-sizing: border-box; }
   .animal-emoji { font-size: 1.5rem; line-height: 1; }
   .animal-name { font-weight: 700; color: var(--ink); font-size: 0.98rem; }
-  .animal-next { margin-left: auto; min-width: 0; color: var(--muted); font-weight: 600; font-size: 0.82rem; }
+  .animal-next { margin-left: auto; flex: 0 1 auto; min-width: 0; width: max-content; max-width: 100%; color: var(--muted); font-weight: 600; font-size: 0.82rem; text-align: left; }
   .barright { display: flex; align-items: center; gap: 12px; }
   .streak, .homestreak { align-items: center; font-weight: 700; color: var(--midd); font-size: 0.9rem; background: rgba(224,146,46,0.16); padding: 5px 11px; border-radius: 999px; white-space: nowrap; flex: 0 0 auto; }
   .streak { display: none; }
   .homestreak { display: inline-flex; }
   .done-badge { color: var(--ok); font-weight: 700; margin-left: 4px; }
-  .toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 700; font-size: 0.95rem; opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; z-index: 250; max-width: 88%; text-align: center; }
+  .toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--card); color: var(--ink); border: 1px solid var(--line); box-shadow: var(--shadow); padding: 10px 18px; border-radius: 999px; font-weight: 700; font-size: 0.95rem; opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; z-index: 250; max-width: 88%; text-align: center; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   button { cursor: pointer; }
@@ -429,7 +429,7 @@ function updateStartStat(){
   const ai = currentAnimal(), a = ANIMALS[ai], na = ANIMALS[ai+1];
   const nextTxt = na ? `Još ${rijeciTxt(na.t - mastered.size)} do sljedeće razine` : "Najjača životinja!";
   const fire = bestStreak >= 2 ? `<span class="homestreak">🔥 ${bestStreak}</span>` : "";
-  document.getElementById("levelStat").innerHTML = `<span class="animal-emoji">${a.e}</span><span class="animal-name">${a.n}</span>${fire}<span class="animal-next">${nextTxt}</span>`;
+  document.getElementById("levelStat").innerHTML = `<span class="animal-emoji">${a.e}</span><span class="animal-name">${a.n}</span>${fire}<span class="animal-next">${balanceTwoLines(nextTxt)}</span>`;
   document.getElementById("reset").style.visibility = hardOnly ? "hidden" : "visible";
   if (hardOnly){
     const n = cards.filter(c => isHard(c.key)).length;
@@ -497,7 +497,7 @@ function begin(){
     : cards.filter(c => inScope(c) && !mastered.has(c.key));
   if (pool.length === 0){ showDone(true); return; }
   sessionTotal = pool.length;
-  streak = 0; milestonesFired = new Set(); updateStreak();
+  streak = 0; seedMilestones(); updateStreak();
   queue = shuffle(pool.map(c=>c.key));
   startEl.style.display="none"; doneEl.style.display="none"; studyEl.style.display="block";
   homeTitle.style.display="none";
@@ -514,6 +514,18 @@ const ANIMALS = [
   {t:430,e:"🐘",n:"Slon"},{t:560,e:"🐉",n:"Zmaj"}
 ];
 function currentAnimal(){ const m = mastered.size; let i = 0; for (let k=0;k<ANIMALS.length;k++){ if (m >= ANIMALS[k].t) i = k; } return i; }
+function balanceTwoLines(text){
+  const words = text.split(" ");
+  if (words.length < 4) return text;
+  let best = 1, bestDiff = Infinity;
+  for (let i = 1; i < words.length; i++){
+    const a = words.slice(0,i).join(" ").length;
+    const b = words.slice(i).join(" ").length;
+    const d = Math.abs(a-b);
+    if (d < bestDiff){ bestDiff = d; best = i; }
+  }
+  return words.slice(0,best).join(" ") + "<br>" + words.slice(best).join(" ");
+}
 function rijeciTxt(n){
   const a = n % 10, b = n % 100;
   if (b >= 11 && b <= 14) return `${n} naučenih riječi`;
@@ -541,6 +553,13 @@ function progressDoneTotal(){
   const done = cards.filter(c=>inScope(c)&&mastered.has(c.key)).length;
   const total = cards.filter(inScope).length;
   return [done, total];
+}
+function seedMilestones(){
+  milestonesFired = new Set();
+  if (hardOnly) return;
+  const [done, total] = progressDoneTotal();
+  const frac = total ? done/total : 0;
+  for (const thr of [0.25,0.5,0.75]) if (frac >= thr) milestonesFired.add(thr);
 }
 function checkMilestone(){
   const [done, total] = progressDoneTotal();
@@ -587,7 +606,7 @@ function renderBack(c){
     : `<a class="see" href="${urlFor(c.word)}" target="_blank" rel="noopener">Vidi znak ↗</a>`;
   card.innerHTML = `
     <div class="backtop">
-      ${selected.size !== 1 ? `<span class="tg">${tag(c.theme)}</span>` : ""}
+      <span class="tg">${tag(c.theme)}</span>
       <div class="bword-row">
         <span class="bword">${esc(c.word)}</span>
         <button class="copybtn" id="copyBtn" aria-label="Kopiraj riječ" title="Kopiraj riječ">${copySvg}</button>
@@ -759,7 +778,7 @@ function restore(){
       : cards.filter(c => inScope(c) && !mastered.has(c.key));
     if (pool.length) {
       sessionTotal = pool.length;
-      streak = 0; milestonesFired = new Set(); updateStreak();
+      streak = 0; seedMilestones(); updateStreak();
       queue = shuffle(pool.map(c=>c.key));
       startEl.style.display="none"; doneEl.style.display="none"; studyEl.style.display="block"; homeTitle.style.display="none";
       card.style.transform = "";
